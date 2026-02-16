@@ -1,6 +1,8 @@
-// pages/details.js
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { db } from '@/lib/firebase'; 
+import { collection, query, where, onSnapshot, doc, updateDoc } from "firebase/firestore";
+
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ViewModal from '../components/ViewModal';
@@ -12,54 +14,75 @@ export default function DetailsPage() {
   const [lang, setLang] = useState('si');
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [activeStudent, setActiveStudent] = useState(null);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
+  
+  // State Management සඳහා අලුතින් එක් කළ කොටස්
+  const [students, setStudents] = useState([]); // සැබෑ සිසුන් ලැයිස්තුව
+  const [activeStudent, setActiveStudent] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+ // 1. Firebase එකෙන් දත්ත Real-time ගෙන ඒම
+  useEffect(() => {
+
+    console.log("--- Firebase Test Start ---");
+
+    const q = query(
+      collection(db, "students"), 
+      where("admittedGrade", "in", [Number(selectedGrade), selectedGrade.toString()])
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+    
+        console.log("Firebase connection status: Active");
+        console.log("Documents found:", snapshot.size);
+      const studentList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setStudents(studentList);
+      setLoading(false); // දත්ත ලැබුණු පසු loading අයින් කරන්න
+    }, (error) => {
+      console.error("Error fetching students:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [selectedGrade]);
+
+  // 2. ශිෂ්‍යයා ඉවත් කිරීමේ (Leave) ක්‍රියාවලිය
+  const confirmLeave = async () => {
+    if (activeStudent) {
+      try {
+        const studentRef = doc(db, "students", activeStudent.id);
+        await updateDoc(studentRef, {
+          status: "Leave",
+          leftDate: new Date().toISOString()
+        });
+        setIsLeaveOpen(false);
+        // මෙහිදී Google Sheet එකට දත්ත යැවීමේ function එක මීළඟට එක් කළ හැක
+      } catch (error) {
+        alert("Error updating status: " + error.message);
+      }
+    }
+  };
 
   const handleLeaveClick = (student) => {
     setActiveStudent(student);
     setIsLeaveOpen(true);
   };
 
-  const confirmLeave = () => {
-    // මෙතැනදී Firebase update එක සිදු කරන්න
-    console.log("Status updated to Leave for:", activeStudent.admissionNo);
-    setIsLeaveOpen(false);
-  };
-
-  const grades = Array.from({ length: 11 }, (_, i) => i + 1);
-
-  // සිසුවාගේ විස්තර පෙන්වීමට
   const handleView = (student) => {
     setActiveStudent(student);
     setIsViewOpen(true);
   };
 
-  // සිසුවාගේ විස්තර Edit කිරීමට
   const handleEdit = (student) => {
     setActiveStudent(student);
     setIsEditOpen(true);
   };
 
-  // සාම්පල දත්ත (Database එක සම්බන්ධ කළ පසු මෙය ඉවත් කරන්න)
-  const dummyStudent = {
-    admissionNo: "1024",
-    name: "Kamal Perera",
-    admittedDate: "2026-01-10",
-    dob: "2015-05-12",
-    grade: "1",
-    guardianName: "Sunil Perera",
-    guardianTP: "0771234567",
-    address: "Kandy Road, Kandy",
-    currentAddress: "Asgiriya, Kandy",
-    motherName: "Nimala Perera",
-    motherTP: "0777654321",
-    fatherName: "Sunil Perera",
-    fatherTP: "0771234567",
-    schoolName: "Kingswood College",
-    occupation: "Business",
-    distance: "2km",
-    status: "Active"
-  };
+  const grades = Array.from({ length: 11 }, (_, i) => i + 1);
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -123,70 +146,76 @@ export default function DetailsPage() {
               </tr>
             </thead>
             <tbody className="text-gray-700 text-sm divide-y">
-              {/* Dummy row for testing */}
-              <tr className="hover:bg-gray-50 transition">
-                <td className="p-3 font-medium">{dummyStudent.admissionNo}</td>
-                <td className="p-3">{dummyStudent.name}</td>
-                <td className="p-3">{dummyStudent.admittedDate}</td>
-                <td className="p-3">{dummyStudent.guardianName}</td>
-                <td className="p-3">{dummyStudent.guardianTP}</td>
-                <td className="p-3">
-                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-bold uppercase">
-                    {dummyStudent.status}
-                  </span>
-                </td>
-                <td className="p-3">
-                  <div className="flex justify-center gap-2">
-                    <button 
-                      onClick={() => handleView(dummyStudent)}
-                      className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-                    >
-                      {lang === 'si' ? 'බලන්න' : 'View'}
-                    </button>
-                    <button 
-                      onClick={() => handleEdit(dummyStudent)}
-                      className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition"
-                    >
-                      {lang === 'si' ? 'සංස්කරණය' : 'Edit'}
-                    </button>
-                    <button 
-                      onClick={() => handleLeaveClick(dummyStudent)}
-                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition"
-                    >
-                      {lang === 'si' ? 'ඉවත් වීම' : 'Leave'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
+              {loading ? (
+                <tr><td colSpan="6" className="p-10 text-center animate-pulse">Loading Students...</td></tr>
+              ) : students.length === 0 ? (
+                <tr><td colSpan="6" className="p-10 text-center text-gray-400 italic">No active students found for Grade {selectedGrade}.</td></tr>
+              ) : (
+                students.map((student) => (
+                  <tr key={student.id} className="hover:bg-gray-50 transition">
+                    <td className="p-3 font-medium">{student.admissionNo}</td>
+                    <td className="p-3 font-semibold">{student.fullName}</td>
+                    <td className="p-3 md:table-cell hidden">{student.admissionDate}</td>
+                    <td className="p-3">{student.guardianName}</td>
+                    <td className="p-3 md:table-cell hidden font-mono">{student.guardianTP}</td>
+                    <td className="p-3">{student.status}</td>
+                    <td className="p-3">
+                      <div className="flex justify-center gap-2">
+                        <button 
+                          onClick={() => handleView(student)}
+                          className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                        >
+                          {lang === 'si' ? 'බලන්න' : 'View'}
+                        </button>
+                        <button 
+                          onClick={() => handleEdit(student)}
+                          className="px-3 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600"
+                        >
+                          {lang === 'si' ? 'සංස්කරණය' : 'Edit'}
+                        </button>
+                        <button 
+                          onClick={() => handleLeaveClick(student)}
+                          className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                        >
+                          {lang === 'si' ? 'ඉවත් වීම' : 'Leave'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </main>
       </div>
       
-      {/* Footer */}
       <Footer lang={lang} />
 
-      {/* Modals - මීට කලින් මේවා තිබුණේ div එකෙන් පිටතයි */}
-      <ViewModal 
-        isOpen={isViewOpen} 
-        onClose={() => setIsViewOpen(false)} 
-        student={activeStudent} 
-        lang={lang} 
-      />
-      <EditModal 
-        isOpen={isEditOpen} 
-        onClose={() => setIsEditOpen(false)} 
-        student={activeStudent} 
-        lang={lang} 
-      />
+      {/* Modals */}
+      {isViewOpen && (
+        <ViewModal 
+          isOpen={isViewOpen} 
+          onClose={() => setIsViewOpen(false)} 
+          student={activeStudent} 
+          lang={lang} 
+        />
+      )}
+      {isEditOpen && (
+        <EditModal 
+          isOpen={isEditOpen} 
+          onClose={() => setIsEditOpen(false)} 
+          student={activeStudent} 
+          lang={lang} 
+        />
+      )}
 
-    <LeaveConfirmModal
-      isOpen={isLeaveOpen}
-      onClose={() => setIsLeaveOpen(false)}
-      onConfirm={confirmLeave}
-      studentName={activeStudent?.name || ''}
-      lang={lang}
-    />
+      <LeaveConfirmModal
+        isOpen={isLeaveOpen}
+        onClose={() => setIsLeaveOpen(false)}
+        onConfirm={confirmLeave}
+        studentName={activeStudent?.name || ''}
+        lang={lang}
+      />
     </div>
   );
 }
