@@ -1,14 +1,23 @@
 // components/LeaveConfirmModal.js
-export default function LeaveConfirmModal({ isOpen, onClose, onConfirm, studentName, lang }) {
-  if (!isOpen) return null;
+import React, { useState } from 'react';
 
+export default function LeaveConfirmModal({ isOpen, onClose, onConfirm, studentName, lang }) {
+  // ඉවත් කිරීමේ ක්‍රියාවලිය සිදුවන අතරතුර button එක disable කිරීමට loading state එකක් පමණක් පාවිච්චි කළ හැක
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  if (!isOpen) return null;
   const isSi = lang === 'si';
+
+  const handleConfirmClick = async () => {
+    setIsDeleting(true);
+    await onConfirm(); // Parent component එකේ (Details.js) ඇති function එක ක්‍රියාත්මක වේ
+    setIsDeleting(false);
+  };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
         
-        {/* Warning Icon & Title */}
         <div className="p-6 text-center">
           <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -20,26 +29,29 @@ export default function LeaveConfirmModal({ isOpen, onClose, onConfirm, studentN
             {isSi ? "අස්වීම ස්ථිර කරන්න" : "Confirm Leaving"}
           </h3>
           
-          <p className="text-gray-600 text-sm">
+          <p className="text-gray-600 text-sm leading-relaxed px-4">
             {isSi 
-              ? `ඔබ ඇත්තටම ${studentName} ශිෂ්‍යා පද්ධතියෙන් ඉවත් කිරීමට (Leave) අවශ්‍යද?` 
-              : `Are you sure you want to mark ${studentName} as left from the system?`}
+              ? `ඔබ ඇත්තටම ${studentName} ශිෂ්‍යා පද්ධතියෙන් ඉවත් කිරීමට (Leave) අවශ්‍යද? මෙය ආපසු හැරවිය නොහැක.` 
+              : `Are you sure you want to mark ${studentName} as left from the system? This action is permanent.`}
           </p>
         </div>
 
-        {/* Buttons */}
         <div className="bg-gray-50 p-4 flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition"
+            disabled={isDeleting}
+            className="flex-1 px-4 py-3 bg-white border border-gray-300 text-gray-800 rounded-lg font-bold hover:bg-gray-100 transition active:scale-95 disabled:opacity-50"
           >
             {isSi ? "නැත" : "No, Cancel"}
           </button>
           <button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition shadow-md"
+            onClick={handleConfirmClick}
+            disabled={isDeleting}
+            className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center"
           >
-            {isSi ? "ඔව්, ඉවත් කරන්න" : "Yes, Confirm"}
+            {isDeleting 
+              ? (isSi ? "ඉවත් කරමින්..." : "Processing...") 
+              : (isSi ? "ඔව්, ඉවත් කරන්න" : "Yes, Confirm")}
           </button>
         </div>
       </div>
