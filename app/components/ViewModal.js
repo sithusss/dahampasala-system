@@ -1,4 +1,19 @@
 // components/ViewModal.js
+
+const formatDriveUrl = (url) => {
+  if (!url) return "/placeholder.png";
+  
+  // Google Drive link එකක්දැයි පරීක්ෂා කිරීම
+  if (url.includes("drive.google.com")) {
+    // Regular Expression එකකින් ID එක පමණක් වෙන් කර ගැනීම
+    const match = url.match(/\/d\/([^/]+)/) || url.match(/id=([^&]+)/);
+    if (match && match[1]) {
+      return `https://lh3.googleusercontent.com/u/0/d/${match[1]}`;
+    }
+  }
+  return url;
+};
+
 const DetailRow = ({ labelEn, labelSi, value }) => (
   <div className="border-b border-gray-100 py-2">
     <p className="text-[10px] uppercase font-bold text-gray-400">
@@ -28,7 +43,11 @@ export default function ViewModal({ student, isOpen, onClose, lang }) {
             {/* Left: Image & Identity */}
             <div className="flex flex-col items-center space-y-4">
               <div className="relative w-48 h-48 rounded-2xl border-4 border-gray-100 overflow-hidden shadow-md">
-                <img src={student.imageUrl || "/placeholder.png"} className="object-cover w-full h-full" alt="Student" />
+                <img 
+                  src={student.imageUrl || "/placeholder.png"} 
+                  className="object-cover w-full h-full" 
+                  alt="Student" 
+                />
               </div>
               <div className="text-center">
                 <p className="text-xs font-bold text-gray-400 uppercase">Status</p>
@@ -41,16 +60,16 @@ export default function ViewModal({ student, isOpen, onClose, lang }) {
             {/* Right: All Data Fields */}
             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
               <DetailRow labelEn="Admission No" labelSi="ඇතුලත් වීමේ අංකය" value={student.admissionNo} />
-              <DetailRow labelEn="Admission Date" labelSi="ඇතුලත් වූ දිනය" value={student.admittedDate} />
-              <DetailRow labelEn="Full Name" labelSi="සම්පූර්ණ නම" value={student.name} />
-              <DetailRow labelEn="Birth Day" labelSi="උපන්දිනය" value={student.dob} />
-              <DetailRow labelEn="Admitted Grade" labelSi="ඇතුලත් වන ශ්‍රේණිය" value={student.grade} />
-              <DetailRow labelEn="School Name" labelSi="පාසලේ නම" value={student.schoolName} />
-              <DetailRow labelEn="Permanent Address" labelSi="ස්ථිර ලිපිනය" value={student.address} />
-              <DetailRow labelEn="Current Address" labelSi="පදිංචි ලිපිනය" value={student.currentAddress} />
-              <DetailRow labelEn="Mother's Name" labelSi="මවගේ නම" value={student.motherName} />
+              <DetailRow labelEn="Admission Date" labelSi="ඇතුලත් වූ දිනය" value={student.admissionDate} />
+              <DetailRow labelEn="Full Name" labelSi="සම්පූර්ණ නම" value={student.fullName} />
+              <DetailRow labelEn="Birth Day" labelSi="උපන්දිනය" value={student.birthDate} />
+              <DetailRow labelEn="Admitted Grade" labelSi="ඇතුලත් වන ශ්‍රේණිය" value={student.admittedGrade} />
+              <DetailRow labelEn="School Name" labelSi="පාසලේ නම" value={student.school} />
+              <DetailRow labelEn="Permanent Address" labelSi="ස්ථිර ලිපිනය" value={student.permanentAddr} />
+              <DetailRow labelEn="Current Address" labelSi="පදිංචි ලිපිනය" value={student.currentAddr} />
+              <DetailRow labelEn="Mother's Name" labelSi="මවගේ නම" value={student.mother} />
               <DetailRow labelEn="Mother's T.P" labelSi="මවගේ දුරකථන අංකය" value={student.motherTP} />
-              <DetailRow labelEn="Father's Name" labelSi="පියාගේ නම" value={student.fatherName} />
+              <DetailRow labelEn="Father's Name" labelSi="පියාගේ නම" value={student.father} />
               <DetailRow labelEn="Father's T.P" labelSi="පියාගේ දුරකථන අංකය" value={student.fatherTP} />
               <DetailRow labelEn="Guardian's Name" labelSi="භාරකරුගේ නම" value={student.guardianName} />
               <DetailRow labelEn="Guardian's T.P" labelSi="භාරකරුගේ දුරකථන අංකය" value={student.guardianTP} />

@@ -6,8 +6,8 @@ export default function Footer({ lang }) {
       <div className="bg-gray-900 text-white py-12 text-center border-t border-gray-800">
         <p className="text-sm px-4">
           © 2026 {lang === 'si' 
-            ? 'මහනුවර, අස්ගිරිය, ශ්‍රී සද්ධර්මවර්ධන දහම් පාසල' 
-            : 'Sri Saddharmawardhana Dhamma School, Asgiriya, Kandy'}. All Rights Reserved.
+            ? 'මහනුවර, අස්ගිරිය, ශ්‍රී සද්ධර්මවර්ධන දහම් පාසල. සියලු හිමිකම් ඇවිරිණි' 
+            : 'Sri Saddharmawardhana Dhamma School, Asgiriya, Kandy. All Rights Reserved.'}
         </p>
         <p className="text-xs mt-2 text-gray-500 uppercase tracking-widest">
           Developed for Dhamma School Management

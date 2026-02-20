@@ -1,7 +1,9 @@
 // components/EditModal.js
 import React, { useState, useEffect } from 'react';
-//import { db } from '../lib/firebase';
+import { db, storage } from '@/lib/firebase'; // Firebase config එකෙන් මේවා ලබාගන්න
 import { doc, updateDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import toast from 'react-hot-toast';
 
 const InputField = ({ labelEn, labelSi, name, type = "text", value, onChange, className = "", readOnly = false }) => (
   <div className={`flex flex-col ${className}`}>
@@ -25,61 +27,94 @@ const InputField = ({ labelEn, labelSi, name, type = "text", value, onChange, cl
 export default function EditModal({ student, isOpen, onClose, lang }) {
   const isSi = lang === 'si';
   const [loading, setLoading] = useState(false);
-  
-  // 1. Edit කරන දත්ත තබා ගැනීමට State එකක්
   const [editData, setEditData] = useState({});
+  const [newImage, setNewImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
 
-  // 2. Modal එක open වන සෑම විටම අදාළ ශිෂ්‍යයාගේ දත්ත State එකට ඇතුළත් කිරීම
   useEffect(() => {
     if (student) {
       setEditData(student);
+      setPreviewUrl(student.imageUrl);
+      setNewImage(null);
     }
   }, [student, isOpen]);
 
   if (!isOpen || !student) return null;
 
-  // 3. Input එකක් වෙනස් වන විට State එක update කිරීම
-  const handleChange = (e) => {
+    const handleChange = (e) => {
     const { name, value } = e.target;
-    setEditData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setEditData(prev => ({ ...prev, [name]: value }));
   };
 
-  // 4. දත්ත Update කිරීමේ Function එක
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      // Firebase එකේ අදාළ Document එක reference කිරීම
-      // මෙහි student.id ලෙස පාවිච්චි කළ යුත්තේ Firestore document ID එකයි
-      const studentRef = doc(db, "students", student.id);
-      
-      await updateDoc(studentRef, editData);
-
-      alert(isSi ? "තොරතුරු සාර්ථකව යාවත්කාලීන කළා!" : "Records updated successfully!");
-      onClose(); // Modal එක වසා දැමීම
-    } catch (error) {
-      console.error("Error updating document: ", error);
-      alert("Error: " + error.message);
-    } finally {
-      setLoading(false);
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setNewImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
     }
   };
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+
+  try {
+    let finalImageUrl = editData.imageUrl;
+
+    if (newImage) {
+      // 1. පැරණි පින්තූරය ඉවත් කිරීමේ නිවැරදි ක්‍රමය
+      if (editData.imageUrl && editData.imageUrl.includes("firebase")) {
+        try {
+          // URL එකෙන් Storage Path එක ලබාගෙන Reference එක සෑදීම
+          const oldImageRef = ref(storage, editData.imageUrl);
+          await deleteObject(oldImageRef);
+          console.log("Old image deleted successfully");
+        } catch (deleteError) {
+          // ගොනුව කලින් මැකී ඇත්නම් හෝ සොයාගත නොහැකි නම් මෙය ක්‍රියාත්මක වේ
+          console.error("Delete Error:", deleteError.message);
+        }
+      }
+
+      // 2. නව පින්තූරය Upload කිරීම
+      const storageRef = ref(storage, `students/${editData.fullName}_${Date.now()}`);
+      const snapshot = await uploadBytes(storageRef, newImage);
+      finalImageUrl = await getDownloadURL(snapshot.ref);
+    }
+
+    // 3. Firestore Update කිරීම
+    const studentRef = doc(db, "students", student.id);
+    await updateDoc(studentRef, {
+      ...editData,
+      imageUrl: finalImageUrl
+    });
+
+    toast.success(isSi ? "යාවත්කාලීනය සාර්ථකයි!" : "Update Successful!", {
+        duration: 4000,
+        style: { borderRadius: '10px', background: '#02591f', color: '#fff' }
+      });
+    onClose();
+  } catch (error) {
+    toast.error(isSi ? "දෝෂයක් සිදුවිය: " + error.message : "Error: " + error.message, {
+        duration: 4000,
+        style: { borderRadius: '10px', background: '#8a0b0b', color: '#fff' }
+      });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
       <div className="bg-[#F3F4F6] rounded-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden shadow-2xl border border-gray-300 flex flex-col">
         
+        {/* Header */}
         <div className="bg-white border-b border-gray-200 p-5 flex justify-between items-center shrink-0">
           <div>
             <h2 className="text-xl font-bold text-gray-900 uppercase">
               {isSi ? "ශිෂ්‍ය තොරතුරු සංස්කරණය" : "Edit Student Information"}
             </h2>
             <p className="text-xs text-gray-500 font-medium">
-              ID: {student.admissionNo} | {student.name}
+              ID: {editData.admissionNo} | {editData.fullName}
             </p>
           </div>
           <button onClick={onClose} className="text-3xl text-gray-400 hover:text-black">&times;</button>
@@ -87,15 +122,40 @@ export default function EditModal({ student, isOpen, onClose, lang }) {
 
         <form onSubmit={handleSubmit} className="p-6 md:p-8 overflow-y-auto space-y-8">
           
+          {/* Section: Image Update */}
+          <div className="space-y-4 bg-white p-5 rounded-xl border border-gray-300">
+            <h3 className="text-xs font-black text-gray-400 uppercase tracking-tight border-b pb-1">Student Image / ඡායාරූපය</h3>
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="w-32 h-32 rounded-lg overflow-hidden border-2 border-gray-200 shadow-inner bg-gray-50">
+                <img 
+                  src={previewUrl || "/public/images/placeholder.png"} 
+                  alt="Student Preview" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {isSi ? "නව පින්තූරයක් තෝරන්න" : "Change Student Photo"}
+                </label>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleImageChange}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800 cursor-pointer"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Section 1: Basic Information */}
           <div className="space-y-4">
             <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] border-b pb-1">Basic Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <InputField labelEn="Admission No" labelSi="ඇතුලත් වීමේ අංකය" name="admissionNo" value={editData.admissionNo} readOnly={true} />
-              <InputField labelEn="Admission Date" labelSi="ඇතුලත් වූ දිනය" name="admittedDate" type="date" value={editData.admittedDate} onChange={handleChange} />
-              <InputField labelEn="Full Name" labelSi="සම්පූර්ණ නම" name="name" value={editData.name} onChange={handleChange} className="md:col-span-2" />
-              <InputField labelEn="Birth Day" labelSi="උපන්දිනය" name="dob" type="date" value={editData.dob} onChange={handleChange} />
-              <InputField labelEn="Admitted Grade" labelSi="ශ්‍රේණිය" name="grade" value={editData.grade} onChange={handleChange} />
+              <InputField labelEn="Admission Date" labelSi="ඇතුලත් වූ දිනය" name="admissionDate" type="date" value={editData.admissionDate} onChange={handleChange} />
+              <InputField labelEn="Full Name" labelSi="සම්පූර්ණ නම" name="fullName" value={editData.fullName} onChange={handleChange} className="md:col-span-2" />
+              <InputField labelEn="Birth Day" labelSi="උපන්දිනය" name="birthDate" type="date" value={editData.birthDate} onChange={handleChange} />
+              <InputField labelEn="Admitted Grade" labelSi="ශ්‍රේණිය" name="admittedGrade" value={editData.admittedGrade} onChange={handleChange} />
             </div>
           </div>
 
@@ -105,11 +165,11 @@ export default function EditModal({ student, isOpen, onClose, lang }) {
             <div className="grid grid-cols-1 gap-4">
               <div className="flex flex-col">
                 <label className="text-[11px] font-bold text-gray-700 mb-1 uppercase">Permanent Address</label>
-                <textarea name="address" value={editData.address || ''} onChange={handleChange} rows="2" className="p-2.5 border border-gray-400 rounded-lg text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-black bg-white"></textarea>
+                <textarea name="permanentAddr" value={editData.permanentAddr || ''} onChange={handleChange} rows="2" className="p-2.5 border border-gray-400 rounded-lg text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-black bg-white"></textarea>
               </div>
               <div className="flex flex-col">
                 <label className="text-[11px] font-bold text-gray-700 mb-1 uppercase">Current Address</label>
-                <textarea name="currentAddress" value={editData.currentAddress || ''} onChange={handleChange} rows="2" className="p-2.5 border border-gray-400 rounded-lg text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-black bg-white"></textarea>
+                <textarea name="currentAddr" value={editData.currentAddr || ''} onChange={handleChange} rows="2" className="p-2.5 border border-gray-400 rounded-lg text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-black bg-white"></textarea>
               </div>
             </div>
           </div>
@@ -117,9 +177,9 @@ export default function EditModal({ student, isOpen, onClose, lang }) {
           {/* Section 3: Parents */}
           <div className="space-y-4 bg-gray-200/70 p-5 rounded-xl border border-gray-300">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <InputField labelEn="Mother's Name" labelSi="මවගේ නම" name="motherName" value={editData.motherName} onChange={handleChange} />
+              <InputField labelEn="Mother's Name" labelSi="මවගේ නම" name="mother" value={editData.mother} onChange={handleChange} />
               <InputField labelEn="Mother's T.P" labelSi="මවගේ දුරකථන අංකය" name="motherTP" value={editData.motherTP} onChange={handleChange} />
-              <InputField labelEn="Father's Name" labelSi="පියාගේ නම" name="fatherName" value={editData.fatherName} onChange={handleChange} />
+              <InputField labelEn="Father's Name" labelSi="පියාගේ නම" name="father" value={editData.father} onChange={handleChange} />
               <InputField labelEn="Father's T.P" labelSi="පියාගේ දුරකථන අංකය" name="fatherTP" value={editData.fatherTP} onChange={handleChange} />
               <InputField labelEn="Guardian's Name" labelSi="භාරකරුගේ නම" name="guardianName" value={editData.guardianName} onChange={handleChange} />
               <InputField labelEn="Guardian's T.P" labelSi="භාරකරුගේ දුරකථන අංකය" name="guardianTP" value={editData.guardianTP} onChange={handleChange} />
@@ -129,7 +189,7 @@ export default function EditModal({ student, isOpen, onClose, lang }) {
           {/* Section 4: Extra */}
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <InputField labelEn="School Name" labelSi="පාසලේ නම" name="schoolName" value={editData.schoolName} onChange={handleChange} className="md:col-span-2" />
+              <InputField labelEn="School Name" labelSi="පාසලේ නම" name="school" value={editData.school} onChange={handleChange} className="md:col-span-2" />
               <InputField labelEn="Occupation" labelSi="රැකියාව" name="occupation" value={editData.occupation} onChange={handleChange} />
               <InputField labelEn="Distance" labelSi="දුර" name="distance" value={editData.distance} onChange={handleChange} />
             </div>
