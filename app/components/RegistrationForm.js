@@ -1,7 +1,7 @@
 "use client";
 import { useState } from 'react';
 import { db, storage } from '@/lib/firebase'; 
-import { doc, getDoc, setDoc,serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import toast from 'react-hot-toast';
 
@@ -11,7 +11,6 @@ export default function RegistrationForm({ lang }) {
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState(null);
 
-  // 1. සියලුම පෝරම දත්ත සඳහා එකම State එකක් භාවිතා කිරීම
   const [formData, setFormData] = useState({
     admissionNo: '',
     admissionDate: '',
@@ -32,7 +31,6 @@ export default function RegistrationForm({ lang }) {
     status: 'Active'
   });
 
-  // 2. Input එකක් වෙනස් වන විට State එක update කරන function එක
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -41,14 +39,11 @@ export default function RegistrationForm({ lang }) {
     }));
   };
 
-// RegistrationForm.js හි handleSubmit function එක වෙනස් කරන්න
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Admission Number එක හිස්තැන් රහිතව ලබා ගැනීම
       const adNo = formData.admissionNo.trim();
 
       if (!adNo) {
@@ -57,7 +52,6 @@ export default function RegistrationForm({ lang }) {
         return;
       }
 
-      // 1. මෙම Admission No එකෙන් දැනටමත් ශිෂ්‍යයෙකු ඉන්නවාදැයි පරීක්ෂා කිරීම (Unique Check)
       const docRef = doc(db, "students", adNo);
       const docSnap = await getDoc(docRef);
 
@@ -66,34 +60,28 @@ export default function RegistrationForm({ lang }) {
           style: { borderRadius: '10px', background: '#8a0b0b', color: '#fff' }
         });
         setLoading(false);
-        return; // දැනටමත් සිටී නම් මෙතනින් නතර වේ
+        return;
       }
 
       let imageUrl = "";
 
-      // 2. පින්තූරය Firebase Storage වෙත Upload කිරීම
       if (image) {
-        // පින්තූරය සඳහා නමක් සෑදීම (Admission No එක භාවිතා කිරීම වඩාත් සුදුසුයි)
         const storageRef = ref(storage, `students/${adNo}_${Date.now()}`);
-        
         const snapshot = await uploadBytes(storageRef, image);
         imageUrl = await getDownloadURL(snapshot.ref);
       }
 
-      // 3. Firestore වෙත දත්ත යැවීම (setDoc භාවිතා කර adNo එක ID එක ලෙස යෙදීම)
       await setDoc(doc(db, "students", adNo), {
         ...formData,
         imageUrl: imageUrl,
         createdAt: serverTimestamp(),
       });
 
-      // සාර්ථක පණිවිඩය
       toast.success(isSi ? "ලියාපදිංචිය සාර්ථකයි!" : "Registration Successful!", {
         duration: 4000,
         style: { borderRadius: '10px', background: '#02591f', color: '#fff' }
       });
       
-      // 4. Form එක Reset කිරීම
       setFormData({
         admissionNo: '', admissionDate: '', fullName: '', birthDate: '', admittedGrade: '',
         permanentAddr: '', currentAddr: '', mother: '', motherTP: '',
@@ -114,12 +102,12 @@ export default function RegistrationForm({ lang }) {
   };
 
   return (
-    <main className="min-h-screen bg-white py-10 px-4">
+    <main className="min-h-screen bg-white py-10 px-4 relative">
       <div className="max-w-4xl mx-auto bg-[#F3F4F6] p-6 md:p-10 rounded-2xl shadow-xl border border-gray-200">
         
         <div className="text-center mb-10">
           <h2 className="text-2xl md:text-3xl font-bold text-black mb-2">
-            {isSi ? "ශිෂ්‍ය ලියාපදිංචි කිරීමේ පෝරමය" : "Student Registration Form"}
+            {isSi ? "ශිෂ්ය ලියාපදිංචි කිරීමේ පෝරමය" : "Student Registration Form"}
           </h2>
           <p className="text-gray-500 text-sm italic">
             {isSi ? "* සලකුණු කර ඇති සියලුම තොරතුරු අනිවාර්ය වේ" : "* All marked fields are required"}
@@ -150,7 +138,7 @@ export default function RegistrationForm({ lang }) {
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-bold text-gray-700 mb-2">Admitted Grade / ඇතුලත් වන ශ්‍රේණිය *</label>
+              <label className="text-sm font-bold text-gray-700 mb-2">Admitted Grade / ඇතුලත් වන ශ්රේණිය *</label>
               <select name="admittedGrade" value={formData.admittedGrade} onChange={handleChange} required className="p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none bg-white text-gray-700">
                 <option value="">Select Grade</option>
                 {[...Array(11)].map((_, i) => (
@@ -181,7 +169,6 @@ export default function RegistrationForm({ lang }) {
               <label className="text-sm font-bold text-gray-700 mb-2">Mother&apos;s T.P / මවගේ දුරකථන අංකය *</label>
               <input name="motherTP" value={formData.motherTP} onChange={handleChange} type="tel" required className="p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none bg-white text-gray-700" />
             </div>
-            {/* අනෙකුත් දෙමාපිය/භාරකරු fields සඳහාද මෙයම අදාළ වේ (fatherName, fatherTP, guardianName, guardianTP) */}
             <div className="flex flex-col">
               <label className="text-sm font-bold text-gray-700 mb-2">Father&apos;s Name / පියාගේ නම *</label>
               <input name="father" value={formData.father} onChange={handleChange} type="text" required className="p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none bg-white text-gray-700" />
@@ -194,7 +181,7 @@ export default function RegistrationForm({ lang }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col md:col-span-2">
-              <label className="text-sm font-bold text-gray-700 mb-2">School Name / ඉගෙනුම ලබ‍න පාසලේ නම *</label>
+              <label className="text-sm font-bold text-gray-700 mb-2">School Name / ඉගෙනුම ලබන පාසලේ නම *</label>
               <input name="school" value={formData.school} onChange={handleChange} type="text" required className="p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none bg-white text-gray-700" />
             </div>
         </div>

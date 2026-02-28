@@ -1,11 +1,9 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// lib/firebase.js
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
+import { getAuth } from "firebase/auth"; // 1. මේක අලුතින් එකතු කරන්න
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyDg9MBCaAHsudpAlE9YGUQGy21XBVvqyyk",
   authDomain: "dahampasala-ba690.firebaseapp.com",
@@ -16,6 +14,11 @@ const firebaseConfig = {
   measurementId: "G-DSXGKZDLVD"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+// Next.js වලදී app එක duplicate නොවී තිබීම සඳහා මේ ක්‍රමය හොඳයි
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+
+const db = getFirestore(app);
+const storage = getStorage(app);
+const auth = getAuth(app); // 2. Auth initialize කිරීම
+
+export { db, storage, auth }; // 3. auth export කරන්න
