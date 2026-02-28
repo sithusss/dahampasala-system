@@ -9,6 +9,7 @@ import ViewModal from '../components/ViewModal';
 import EditModal from '../components/EditModal';
 import LeaveConfirmModal from '../components/LeaveConfirmModal';
 
+
 export default function DetailsPage() {
   const [selectedGrade, setSelectedGrade] = useState(1);
   const [lang, setLang] = useState('si');
@@ -158,7 +159,11 @@ export default function DetailsPage() {
                     <td className="p-3 md:table-cell hidden">{student.admissionDate}</td>
                     <td className="p-3">{student.guardianName}</td>
                     <td className="p-3 md:table-cell hidden font-mono">{student.guardianTP}</td>
-                    <td className="p-3">{student.status}</td>
+                    <td className="p-3">
+                      <span className={`px-4 py-1 rounded-full text-xs font-bold ${student.status === 'Leave' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                        {student.status}
+                      </span>
+                    </td>
                     <td className="p-3">
                       <div className="flex justify-center gap-2">
                         <button 
