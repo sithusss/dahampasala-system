@@ -203,6 +203,7 @@ export default function DetailsPage() {
     
     try {
       const userId = localStorage.getItem('userId');
+      const buttonDate = new Date().toISOString().split('T')[0];
       
       for (const student of allStudents) {
         const currentGrade = Number(student.admittedGrade);
@@ -215,7 +216,8 @@ export default function DetailsPage() {
       }
       
       await setDoc(doc(db, "user", userId), {
-        next_class: true
+        next_class: true,
+        button_date: buttonDate
       }, { merge: true });
       
       toast.success(lang === 'si' ? 'සියලු සිසුන් ඊළඟ ශ්රේණියට ගියා!' : 'All students moved to next class!');
@@ -228,6 +230,7 @@ export default function DetailsPage() {
     setShowResetConfirm(false);
     
     try {
+      const userId = localStorage.getItem('userId');
       const studentsWithPrevGrade = allStudents.filter(s => s.previousGrade);
       
       for (const student of studentsWithPrevGrade) {
@@ -237,6 +240,10 @@ export default function DetailsPage() {
           previousGrade: null
         }, { merge: true });
       }
+      
+      await setDoc(doc(db, "user", userId), {
+        next_class: false
+      }, { merge: true });
       
       toast.success(lang === 'si' ? 'ශ්රේණි නැවත පෙර තත්වයට!' : 'Grades reverted!');
     } catch (error) {
@@ -417,9 +424,9 @@ export default function DetailsPage() {
       <div className="fixed bottom-6 right-6 flex flex-col gap-3">
         <button
           onClick={() => setShowNextClassConfirm(true)}
-          disabled={anyUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)}
+          disabled={(anyUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || currentUserNextClass}
           className={`px-4 py-3 text-white text-sm font-bold rounded-full shadow-lg transition flex items-center gap-2 ${
-            (anyUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole))
+            ((anyUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || currentUserNextClass)
               ? 'bg-gray-400 cursor-not-allowed' 
               : 'bg-blue-600 hover:bg-blue-700'
           }`}
@@ -432,9 +439,9 @@ export default function DetailsPage() {
         </button>
         <button
           onClick={() => setShowResetConfirm(true)}
-          disabled={!currentUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)}
+          disabled={(!currentUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || !anyUserNextClass}
           className={`px-4 py-3 text-white text-sm font-bold rounded-full shadow-lg transition flex items-center gap-2 ${
-            (!currentUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole))
+            ((!currentUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || !anyUserNextClass)
               ? 'bg-gray-400 cursor-not-allowed' 
               : 'bg-orange-600 hover:bg-orange-700'
           }`}
