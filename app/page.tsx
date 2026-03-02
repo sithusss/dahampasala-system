@@ -111,12 +111,12 @@ export default function Home() {
       {isLoggedIn && (
         <button 
           onClick={handleLogout} 
-          className="fixed bottom-6 right-6 bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl shadow-2xl hover:shadow-red-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-3 font-semibold group z-50"
+          className="fixed bottom-6 right-6 bg-gradient-to-r from-red-600 to-red-700 text-white px-3 md:px-6 py-3 rounded-xl shadow-2xl hover:shadow-red-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-0 md:gap-3 font-semibold group z-50"
         >
           <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
-          <span>{lang === 'si' ? 'ඉවත් වන්න' : 'Logout'}</span>
+          <span className="w-0 md:w-auto overflow-hidden md:overflow-visible">{lang === 'si' ? 'ඉවත් වන්න' : 'Logout'}</span>
         </button>
       )}
     </div>

@@ -10,12 +10,12 @@ export default function Header({ lang, setLang, showNotification, onNotification
   return (
     <header className="w-full shadow-md">
       {/* Top Bar with Language Toggle */}
-      <div className="bg-[#800000] text-white p-2 flex justify-between items-center px-6 md:px-20 text-sm border-b border-gray-800">
-        <div className="flex gap-4 font-semibold uppercase tracking-wider text-xs ">
+      <div className="bg-[#800000] text-white py-1.5 md:py-2 flex justify-between items-center px-3 md:px-20 text-xs md:text-sm border-b border-gray-800">
+        <div className="flex gap-3 md:gap-4 font-semibold uppercase tracking-wider text-xs ">
             {/* Dynamic Redirect Button */}
           <Link 
             href={isDetailsPage ? "/" : "/details"} 
-            className="bg-white text-[#800000] px-3 py-1 rounded-sm hover:bg-gray-200 transition-colors duration-200 font-bold"
+            className="bg-white text-[#800000] px-2.5 md:px-3 py-1 rounded-sm hover:bg-gray-200 transition-colors duration-200 font-bold"
           >
             {isDetailsPage 
               ? (lang === 'si' ? 'ලියාපදිංචි කිරීම' : 'Registration') 
@@ -46,9 +46,9 @@ export default function Header({ lang, setLang, showNotification, onNotification
       </div>
       
       {/* Logo Section */}
-      <div className="flex flex-col items-center py-8 bg-gray-900">
+      <div className="flex flex-col items-center py-5 md:py-8 bg-gray-900">
         {/* Rounded Logo Container */}
-        <div className="relative w-28 h-28 mb-4 border-2 border-white rounded-full overflow-hidden flex items-center justify-center bg-white">
+        <div className="relative w-20 h-20 md:w-28 md:h-28 mb-3 md:mb-4 border-2 border-white rounded-full overflow-hidden flex items-center justify-center bg-white">
            <Image 
               src="/images/logo.jpg" 
               alt="Logo" 
@@ -56,7 +56,7 @@ export default function Header({ lang, setLang, showNotification, onNotification
               className="object-cover rounded-full p-1" // මෙන්න මෙතනින් තමයි රවුම් වෙන්නේ
            />
         </div>
-        <h1 className="text-xl md:text-2xl font-bold text-center text-white px-4 max-w-2xl leading-relaxed">
+        <h1 className="text-base md:text-2xl font-bold text-center text-white px-3 md:px-4 max-w-2xl leading-relaxed">
           {lang === 'si' ? 'මහනුවර, අස්ගිරිය, ශ්‍රී සද්ධර්මවර්ධන දහම් පාසල' : 'Sri Saddharmawardhana Dhamma School, Asgiriya, Kandy'}
         </h1>
       </div>
