@@ -3,13 +3,31 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    font-size: 14px;
+  body {
+    @apply text-sm md:text-base;
   }
   
-  @media (min-width: 768px) {
-    html {
-      font-size: 16px;
-    }
+  h1 {
+    @apply text-lg md:text-2xl;
+  }
+  
+  h2 {
+    @apply text-base md:text-xl;
+  }
+  
+  h3 {
+    @apply text-sm md:text-lg;
+  }
+  
+  button {
+    @apply text-xs md:text-sm;
+  }
+  
+  input, select, textarea {
+    @apply text-xs md:text-base;
+  }
+  
+  table {
+    @apply text-xs md:text-sm;
   }
 }
