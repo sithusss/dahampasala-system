@@ -77,23 +77,23 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="max-w-md w-full bg-white p-6 md:p-10 rounded-3xl shadow-2xl border border-gray-100">
-        <h2 className="text-2xl md:text-3xl font-black text-center text-gray-800 mb-6 md:mb-8">LOGIN</h2>
-        <form onSubmit={handleLogin} className="space-y-4 md:space-y-5">
+      <div className="max-w-md w-full bg-white p-10 rounded-3xl shadow-2xl border border-gray-100">
+        <h2 className="text-3xl font-black text-center text-gray-800 mb-8">LOGIN</h2>
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-xs md:text-sm font-bold text-gray-700 mb-1">Email Address</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full p-2.5 md:p-3 border rounded-xl focus:ring-2 focus:ring-[#800000] outline-none text-sm md:text-base" placeholder="example@mail.com" />
+            <label className="block text-sm font-bold text-gray-700 mb-1">Email Address</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#800000] outline-none" placeholder="example@mail.com" />
           </div>
           <div>
-            <label className="block text-xs md:text-sm font-bold text-gray-700 mb-1">Password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full p-2.5 md:p-3 border rounded-xl focus:ring-2 focus:ring-[#800000] outline-none text-sm md:text-base" placeholder="••••••••" />
+            <label className="block text-sm font-bold text-gray-700 mb-1">Password</label>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#800000] outline-none" placeholder="••••••••" />
           </div>
-          <button disabled={loading} className="w-full bg-[#800000] text-white py-2.5 md:py-3 rounded-xl font-bold hover:bg-black transition-all text-sm md:text-base">
+          <button disabled={loading} className="w-full bg-[#800000] text-white py-3 rounded-xl font-bold hover:bg-black transition-all">
             {loading ? "Logging in..." : "LOGIN"}
           </button>
         </form>
-        <div className="mt-6 md:mt-8 text-center border-t pt-4 md:pt-6">
-          <button onClick={() => router.push('/signup')} className="text-[#800000] font-black hover:underline text-xs md:text-base">
+        <div className="mt-8 text-center border-t pt-6">
+          <button onClick={() => router.push('/signup')} className="text-[#800000] font-black hover:underline">
             CREATE ACCOUNT / ලියාපදිංචි වන්න
           </button>
         </div>
