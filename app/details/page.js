@@ -260,7 +260,8 @@ export default function DetailsPage() {
           <h3 className="font-bold text-gray-700 mb-4 px-2 uppercase tracking-wider text-sm">
             {lang === 'si' ? "ශ්රේණිය තෝරන්න" : "Select Grade"}
           </h3>
-          <nav className="space-y-1">
+          {/* Desktop: Button List */}
+          <nav className="hidden md:block space-y-1">
             {grades.map((grade) => (
               <button
                 key={grade}
@@ -275,6 +276,18 @@ export default function DetailsPage() {
               </button>
             ))}
           </nav>
+          {/* Mobile: Dropdown */}
+          <select
+            value={selectedGrade}
+            onChange={(e) => setSelectedGrade(Number(e.target.value))}
+            className="md:hidden w-full p-3 border rounded-lg bg-white text-gray-700 font-semibold"
+          >
+            {grades.map((grade) => (
+              <option key={grade} value={grade}>
+                {lang === 'si' ? `${grade} ශ්රේණිය` : `Grade ${grade}`}
+              </option>
+            ))}
+          </select>
         </aside>
 
         <main className="flex-1 p-4 md:p-8 overflow-x-auto">
@@ -309,7 +322,7 @@ export default function DetailsPage() {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                {lang === 'si' ? 'CSV බාගන්න' : 'Download CSV'}
+                <span className="hidden md:inline">{lang === 'si' ? 'CSV බාගන්න' : 'Download CSV'}</span>
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
@@ -425,7 +438,7 @@ export default function DetailsPage() {
         <button
           onClick={() => setShowNextClassConfirm(true)}
           disabled={(anyUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || currentUserNextClass}
-          className={`px-4 py-3 text-white text-sm font-bold rounded-full shadow-lg transition flex items-center gap-2 ${
+          className={`px-3 md:px-4 py-3 text-white text-sm font-bold rounded-full shadow-lg transition flex items-center gap-2 ${
             ((anyUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || currentUserNextClass)
               ? 'bg-gray-400 cursor-not-allowed' 
               : 'bg-blue-600 hover:bg-blue-700'
@@ -435,12 +448,12 @@ export default function DetailsPage() {
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
           </svg>
-          {lang === 'si' ? 'ඊළඟ ශ්රේණිය' : 'Next Class'}
+          <span className="hidden md:inline">{lang === 'si' ? 'ඊළඟ ශ්රේණිය' : 'Next Class'}</span>
         </button>
         <button
           onClick={() => setShowResetConfirm(true)}
           disabled={(!currentUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || !anyUserNextClass}
-          className={`px-4 py-3 text-white text-sm font-bold rounded-full shadow-lg transition flex items-center gap-2 ${
+          className={`px-3 md:px-4 py-3 text-white text-sm font-bold rounded-full shadow-lg transition flex items-center gap-2 ${
             ((!currentUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || !anyUserNextClass)
               ? 'bg-gray-400 cursor-not-allowed' 
               : 'bg-orange-600 hover:bg-orange-700'
@@ -450,7 +463,7 @@ export default function DetailsPage() {
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          {lang === 'si' ? 'නැවත පෙර තත්වයට' : 'Undo'}
+          <span className="hidden md:inline">{lang === 'si' ? 'නැවත පෙර තත්වයට' : 'Undo'}</span>
         </button>
       </div>
 
