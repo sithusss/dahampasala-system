@@ -2,8 +2,15 @@
 export default function Footer({ lang }) {
   return (
     <footer className="w-full">
-      {/* Main Footer Section */}
-      <div className="bg-gray-900 text-white py-12 text-center border-t border-gray-800">
+      {/* Mobile Footer Section */}
+      <div className="md:hidden bg-gray-900 text-white py-3 text-center border-t border-gray-800">
+        <p className="text-xs px-4">
+          © 2026. All Rights Reserved.
+        </p>
+      </div>
+
+      {/* Main Footer Section (Desktop) */}
+      <div className="hidden md:block bg-gray-900 text-white py-12 text-center border-t border-gray-800">
         <p className="text-sm px-4">
           © 2026 {lang === 'si' 
             ? 'මහනුවර, අස්ගිරිය, ශ්‍රී සද්ධර්මවර්ධන දහම් පාසල. සියලු හිමිකම් ඇවිරිණි' 
