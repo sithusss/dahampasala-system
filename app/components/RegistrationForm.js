@@ -107,7 +107,7 @@ export default function RegistrationForm({ lang }) {
         
         <div className="text-center mb-10">
           <h2 className="text-2xl md:text-3xl font-bold text-black mb-2">
-            {isSi ? "ශිෂ්ය ලියාපදිංචි කිරීමේ පෝරමය" : "Student Registration Form"}
+            {isSi ? "ශිෂ්‍ය ලියාපදිංචි කිරීමේ පෝරමය" : "Student Registration Form"}
           </h2>
           <p className="text-gray-500 text-sm italic">
             {isSi ? "* සලකුණු කර ඇති සියලුම තොරතුරු අනිවාර්ය වේ" : "* All marked fields are required"}
