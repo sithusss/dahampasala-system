@@ -138,7 +138,7 @@ export default function RegistrationForm({ lang }) {
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-bold text-gray-700 mb-2">Admitted Grade / ඇතුලත් වන ශ්රේණිය *</label>
+              <label className="text-sm font-bold text-gray-700 mb-2">Admitted Grade / ඇතුලත් වන ශ්‍රේණිය *</label>
               <select name="admittedGrade" value={formData.admittedGrade} onChange={handleChange} required className="p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none bg-white text-gray-700">
                 <option value="">Select Grade</option>
                 {[...Array(11)].map((_, i) => (
