@@ -16,6 +16,7 @@ export default function DetailsPage() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
+  const [showGradeDropdown, setShowGradeDropdown] = useState(false);
   
   const [students, setStudents] = useState([]);
   const [leftStudents, setLeftStudents] = useState([]);
@@ -255,8 +256,44 @@ export default function DetailsPage() {
     <div className="min-h-screen bg-white flex flex-col">
       <Header lang={lang} setLang={setLang} />
       
+      {/* Mobile Grade Dropdown */}
+      <div className="md:hidden bg-gray-50 border-b border-gray-200 p-3">
+        <div className="relative inline-block">
+          <button
+            onClick={() => setShowGradeDropdown(!showGradeDropdown)}
+            className="px-3 py-2 bg-black text-white text-xs font-bold rounded-lg hover:bg-gray-800 transition flex items-center gap-2"
+          >
+            {lang === 'si' ? `${selectedGrade} ශ්‍රේණිය` : `Grade ${selectedGrade}`}
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {showGradeDropdown && (
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+              {grades.map((grade) => (
+                <button
+                  key={grade}
+                  onClick={() => {
+                    setSelectedGrade(grade);
+                    setShowGradeDropdown(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 text-xs transition-all ${
+                    selectedGrade === grade 
+                    ? 'bg-black text-white' 
+                    : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {lang === 'si' ? `${grade} ශ්‍රේණිය` : `Grade ${grade}`}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      
       <div className="flex flex-1 flex-col md:flex-row">
-        <aside className="w-full md:w-64 bg-gray-100 border-r border-gray-200 p-4">
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:block w-64 bg-gray-100 border-r border-gray-200 p-4">
           <h3 className="font-bold text-gray-700 mb-4 px-2 uppercase tracking-wider text-sm">
             {lang === 'si' ? "ශ්‍රේණිය තෝරන්න" : "Select Grade"}
           </h3>
@@ -282,7 +319,7 @@ export default function DetailsPage() {
             <div className="flex gap-4 border-b">
               <button
                 onClick={() => setActiveTab('active')}
-                className={`px-6 py-3 font-bold transition-all ${
+                className={`px-6 py-3 font-bold text-sm transition-all ${
                   activeTab === 'active'
                     ? 'border-b-4 border-black text-black'
                     : 'text-gray-500 hover:text-gray-700'
@@ -292,7 +329,7 @@ export default function DetailsPage() {
               </button>
               <button
                 onClick={() => setActiveTab('left')}
-                className={`px-6 py-3 font-bold transition-all ${
+                className={`px-6 py-3 font-bold text-sm transition-all ${
                   activeTab === 'left'
                     ? 'border-b-4 border-black text-black'
                     : 'text-gray-500 hover:text-gray-700'
