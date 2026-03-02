@@ -41,10 +41,22 @@ export default function LoginPage() {
         
         // සාමාන්‍ය Editor පරීක්ෂාව
         if (userData.status === 'active') {
-          await updateDoc(doc(db, "user", user.uid), { login: true });
+          const loginTime = new Date().getTime();
+          await updateDoc(doc(db, "user", user.uid), { 
+            login: true,
+            loginTime: loginTime
+          });
           localStorage.setItem('userRole', userData.role || 'editor');
           localStorage.setItem('userEmail', email.trim());
           localStorage.setItem('userId', user.uid);
+          localStorage.setItem('loginTime', loginTime.toString());
+          
+          setTimeout(async () => {
+            await updateDoc(doc(db, "user", user.uid), { login: false });
+            localStorage.clear();
+            window.location.href = '/';
+          }, 6 * 60 * 60 * 1000);
+          
           toast.success("Login Successful!");
           window.location.href = '/';
         } else {

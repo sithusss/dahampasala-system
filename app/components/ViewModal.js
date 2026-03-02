@@ -1,19 +1,4 @@
 // components/ViewModal.js
-
-const formatDriveUrl = (url) => {
-  if (!url) return "/placeholder.png";
-  
-  // Google Drive link එකක්දැයි පරීක්ෂා කිරීම
-  if (url.includes("drive.google.com")) {
-    // Regular Expression එකකින් ID එක පමණක් වෙන් කර ගැනීම
-    const match = url.match(/\/d\/([^/]+)/) || url.match(/id=([^&]+)/);
-    if (match && match[1]) {
-      return `https://lh3.googleusercontent.com/u/0/d/${match[1]}`;
-    }
-  }
-  return url;
-};
-
 const DetailRow = ({ labelEn, labelSi, value }) => (
   <div className="border-b border-gray-100 py-2">
     <p className="text-[10px] uppercase font-bold text-gray-400">
