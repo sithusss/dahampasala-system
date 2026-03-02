@@ -372,34 +372,34 @@ export default function DetailsPage() {
           </div>
 
           <table className="w-full border-collapse bg-white shadow-sm rounded-lg overflow-hidden">
-            <thead className="bg-gray-800 text-white text-sm">
+            <thead className="bg-gray-800 text-white text-xs md:text-sm">
               <tr>
-                <th className="p-4 text-left border-r border-gray-700">
+                <th className="p-2 md:p-4 text-left border-r border-gray-700">
                   {lang === 'si' ? 'ඇතුලත් වීමේ අංකය' : 'Admission No'}
                 </th>
-                <th className="p-4 text-left border-r border-gray-700">
+                <th className="p-2 md:p-4 text-left border-r border-gray-700">
                   {lang === 'si' ? 'නම' : 'Name'}
                 </th>
-                <th className="p-4 text-left border-r border-gray-700">
+                <th className="p-2 md:p-4 text-left border-r border-gray-700">
                   {lang === 'si' ? 'ඇතුලත් වූ දිනය' : 'Admitted Date'}
                 </th>
                 {activeTab === 'left' && (
-                  <th className="p-4 text-left border-r border-gray-700">
+                  <th className="p-2 md:p-4 text-left border-r border-gray-700">
                     {lang === 'si' ? 'ඉවත් වූ දිනය' : 'Left Date'}
                   </th>
                 )}
-                <th className="p-4 text-left border-r border-gray-700">
+                <th className="p-2 md:p-4 text-left border-r border-gray-700">
                   {lang === 'si' ? 'භාරකරුගේ නම' : 'Guardian Name'}
                 </th>
-                <th className="p-4 text-left border-r border-gray-700">
+                <th className="p-2 md:p-4 text-left border-r border-gray-700">
                   {lang === 'si' ? 'දුරකථන අංකය' : 'Guardian T.P'}
                 </th>
-                <th className="p-4 text-center">
+                <th className="p-2 md:p-4 text-center">
                   {lang === 'si' ? 'ක්‍රියාකාරකම්' : 'Actions'}
                 </th>
               </tr>
             </thead>
-            <tbody className="text-gray-700 text-sm divide-y">
+            <tbody className="text-gray-700 text-xs md:text-sm divide-y">
               {loading ? (
                 <tr><td colSpan={activeTab === 'left' ? "7" : "6"} className="p-10 text-center animate-pulse">Loading Students...</td></tr>
               ) : activeTab === 'active' ? (
@@ -408,12 +408,12 @@ export default function DetailsPage() {
                 ) : (
                   students.map((student) => (
                     <tr key={student.id} className="hover:bg-gray-50 transition">
-                      <td className="p-3 font-medium">{student.admissionNo || '-'}</td>
-                      <td className="p-3 font-semibold">{student.fullName || '-'}</td>
-                      <td className="p-3">{student.admissionDate || '-'}</td>
-                      <td className="p-3">{student.guardianName || '-'}</td>
-                      <td className="p-3 font-mono">{student.guardianTP || '-'}</td>
-                      <td className="p-3">
+                      <td className="p-1.5 md:p-3 font-medium">{student.admissionNo || '-'}</td>
+                      <td className="p-1.5 md:p-3 font-semibold">{student.fullName || '-'}</td>
+                      <td className="p-1.5 md:p-3">{student.admissionDate || '-'}</td>
+                      <td className="p-1.5 md:p-3">{student.guardianName || '-'}</td>
+                      <td className="p-1.5 md:p-3 font-mono">{student.guardianTP || '-'}</td>
+                      <td className="p-1.5 md:p-3">
                         <div className="flex justify-center gap-2">
                           <button onClick={() => handleView(student)} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
                             {lang === 'si' ? 'බලන්න' : 'View'}
@@ -435,13 +435,13 @@ export default function DetailsPage() {
                 ) : (
                   leftStudents.map((student) => (
                     <tr key={student.id} className="hover:bg-gray-50 transition">
-                      <td className="p-3 font-medium">{student.admissionNo || '-'}</td>
-                      <td className="p-3 font-semibold">{student.fullName || '-'}</td>
-                      <td className="p-3">{student.admissionDate || '-'}</td>
-                      <td className="p-3">{student.leftDate || '-'}</td>
-                      <td className="p-3">{student.guardianName || '-'}</td>
-                      <td className="p-3 font-mono">{student.guardianTP || '-'}</td>
-                      <td className="p-3">
+                      <td className="p-1.5 md:p-3 font-medium">{student.admissionNo || '-'}</td>
+                      <td className="p-1.5 md:p-3 font-semibold">{student.fullName || '-'}</td>
+                      <td className="p-1.5 md:p-3">{student.admissionDate || '-'}</td>
+                      <td className="p-1.5 md:p-3">{student.leftDate || '-'}</td>
+                      <td className="p-1.5 md:p-3">{student.guardianName || '-'}</td>
+                      <td className="p-1.5 md:p-3 font-mono">{student.guardianTP || '-'}</td>
+                      <td className="p-1.5 md:p-3">
                         <div className="flex justify-center gap-2">
                           <button onClick={() => handleView(student)} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
                             {lang === 'si' ? 'බලන්න' : 'View'}
