@@ -54,15 +54,15 @@ export default function SignupPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="max-w-lg w-full bg-white p-10 rounded-3xl shadow-2xl">
-        <h2 className="text-3xl font-black text-center text-gray-800 mb-8">SIGN UP</h2>
-        <form onSubmit={handleSignup} className="space-y-4">
-          <input name="fullName" placeholder="Full Name" onChange={handleChange} required className="w-full p-3 border rounded-xl" />
-          <input name="phone" placeholder="Phone Number" onChange={handleChange} required className="w-full p-3 border rounded-xl" />
-          <input name="email" type="email" placeholder="Email" onChange={handleChange} required className="w-full p-3 border rounded-xl" />
-          <input name="password" type="password" placeholder="Password" onChange={handleChange} required className="w-full p-3 border rounded-xl" />
-          <input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} required className="w-full p-3 border rounded-xl" />
-          <button disabled={loading} className="w-full bg-[#800000] text-white py-3 rounded-xl font-bold">
+      <div className="max-w-lg w-full bg-white p-6 md:p-10 rounded-3xl shadow-2xl">
+        <h2 className="text-2xl md:text-3xl font-black text-center text-gray-800 mb-6 md:mb-8">SIGN UP</h2>
+        <form onSubmit={handleSignup} className="space-y-3 md:space-y-4">
+          <input name="fullName" placeholder="Full Name" onChange={handleChange} required className="w-full p-2.5 md:p-3 border rounded-xl text-sm md:text-base" />
+          <input name="phone" placeholder="Phone Number" onChange={handleChange} required className="w-full p-2.5 md:p-3 border rounded-xl text-sm md:text-base" />
+          <input name="email" type="email" placeholder="Email" onChange={handleChange} required className="w-full p-2.5 md:p-3 border rounded-xl text-sm md:text-base" />
+          <input name="password" type="password" placeholder="Password" onChange={handleChange} required className="w-full p-2.5 md:p-3 border rounded-xl text-sm md:text-base" />
+          <input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} required className="w-full p-2.5 md:p-3 border rounded-xl text-sm md:text-base" />
+          <button disabled={loading} className="w-full bg-[#800000] text-white py-2.5 md:py-3 rounded-xl font-bold text-sm md:text-base">
             {loading ? "Registering..." : "REGISTER AS EDITOR"}
           </button>
         </form>
