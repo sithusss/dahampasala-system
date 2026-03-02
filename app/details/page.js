@@ -220,7 +220,7 @@ export default function DetailsPage() {
         button_date: buttonDate
       }, { merge: true });
       
-      toast.success(lang === 'si' ? 'සියලු සිසුන් ඊළඟ ශ්‍රේණියට ගියා!' : 'All students moved to next class!');
+      toast.success(lang === 'si' ? 'සියලු සිසුන් ඊළඟ ශ්රේණියට ගියා!' : 'All students moved to next class!');
     } catch (error) {
       toast.error('Error: ' + error.message);
     }
@@ -245,7 +245,7 @@ export default function DetailsPage() {
         next_class: false
       }, { merge: true });
       
-      toast.success(lang === 'si' ? 'ශ්‍රේණි නැවත පෙර තත්වයට!' : 'Grades reverted!');
+      toast.success(lang === 'si' ? 'ශ්රේණි නැවත පෙර තත්වයට!' : 'Grades reverted!');
     } catch (error) {
       toast.error('Error: ' + error.message);
     }
@@ -258,7 +258,7 @@ export default function DetailsPage() {
       <div className="flex flex-1 flex-col md:flex-row">
         <aside className="w-full md:w-64 bg-gray-100 border-r border-gray-200 p-4">
           <h3 className="font-bold text-gray-700 mb-4 px-2 uppercase tracking-wider text-sm">
-            {lang === 'si' ? "ශ්‍රේණිය තෝරන්න" : "Select Grade"}
+            {lang === 'si' ? "ශ්රේණිය තෝරන්න" : "Select Grade"}
           </h3>
           <nav className="space-y-1">
             {grades.map((grade) => (
@@ -271,7 +271,7 @@ export default function DetailsPage() {
                   : 'text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                {lang === 'si' ? `${grade} ශ්‍රේණිය` : `Grade ${grade}`}
+                {lang === 'si' ? `${grade} ශ්රේණිය` : `Grade ${grade}`}
               </button>
             ))}
           </nav>
@@ -288,7 +288,7 @@ export default function DetailsPage() {
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                {lang === 'si' ? 'ක්‍රියාකාරී සිසුන්' : 'Active Students'}
+                {lang === 'si' ? 'ක්රියාකාරී සිසුන්' : 'Active Students'}
               </button>
               <button
                 onClick={() => setActiveTab('left')}
@@ -320,13 +320,13 @@ export default function DetailsPage() {
                     onClick={() => handleDownloadCSV('grade')}
                     className="w-full text-left px-4 py-3 hover:bg-gray-100 text-sm font-semibold text-gray-700 rounded-t-lg transition"
                   >
-                    {lang === 'si' ? `${selectedGrade} ශ්‍රේණිය` : `Grade ${selectedGrade}`}
+                    {lang === 'si' ? `${selectedGrade} ශ්රේණිය` : `Grade ${selectedGrade}`}
                   </button>
                   <button
                     onClick={() => handleDownloadCSV('all')}
                     className="w-full text-left px-4 py-3 hover:bg-gray-100 text-sm font-semibold text-gray-700 rounded-b-lg transition border-t"
                   >
-                    {lang === 'si' ? 'සියලු ශ්‍රේණි' : 'All Grades'}
+                    {lang === 'si' ? 'සියලු ශ්රේණි' : 'All Grades'}
                   </button>
                 </div>
               )}
@@ -357,7 +357,7 @@ export default function DetailsPage() {
                   {lang === 'si' ? 'දුරකථන අංකය' : 'Guardian T.P'}
                 </th>
                 <th className="p-4 text-center">
-                  {lang === 'si' ? 'ක්‍රියාකාරකම්' : 'Actions'}
+                  {lang === 'si' ? 'ක්රියාකාරකම්' : 'Actions'}
                 </th>
               </tr>
             </thead>
@@ -430,12 +430,12 @@ export default function DetailsPage() {
               ? 'bg-gray-400 cursor-not-allowed' 
               : 'bg-blue-600 hover:bg-blue-700'
           }`}
-          title={lang === 'si' ? 'ඊළඟ ශ්‍රේණියට' : 'To Next Class'}
+          title={lang === 'si' ? 'ඊළඟ ශ්රේණියට' : 'To Next Class'}
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
           </svg>
-          {lang === 'si' ? 'ඊළඟ ශ්‍රේණිය' : 'Next Class'}
+          {lang === 'si' ? 'ඊළඟ ශ්රේණිය' : 'Next Class'}
         </button>
         <button
           onClick={() => setShowResetConfirm(true)}
@@ -482,11 +482,11 @@ export default function DetailsPage() {
                 </svg>
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">
-                {lang === 'si' ? 'ඊළඟ ශ්‍රේණියට යවන්න' : 'Move to Next Class'}
+                {lang === 'si' ? 'ඊළඟ ශ්රේණියට යවන්න' : 'Move to Next Class'}
               </h3>
               <p className="text-gray-600 text-sm leading-relaxed px-4">
                 {lang === 'si' 
-                  ? 'සියලු සිසුන් ඊළඟ ශ්‍රේණියට යවන්නද?' 
+                  ? 'සියලු සිසුන් ඊළඟ ශ්රේණියට යවන්නද?' 
                   : 'Move all students to next class?'}
               </p>
             </div>
@@ -522,7 +522,7 @@ export default function DetailsPage() {
               </h3>
               <p className="text-gray-600 text-sm leading-relaxed px-4">
                 {lang === 'si' 
-                  ? 'ශ්‍රේණි වෙනස් කිරීම අහෝසි කරන්නද?' 
+                  ? 'ශ්රේණි වෙනස් කිරීම අහෝසි කරන්නද?' 
                   : 'Undo grade changes?'}
               </p>
             </div>

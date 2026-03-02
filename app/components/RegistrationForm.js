@@ -107,7 +107,7 @@ export default function RegistrationForm({ lang }) {
         
         <div className="text-center mb-10">
           <h2 className="text-2xl md:text-3xl font-bold text-black mb-2">
-            {isSi ? "ශිෂ්‍ය ලියාපදිංචි කිරීමේ පෝරමය" : "Student Registration Form"}
+            {isSi ? "ශිෂ්ය ලියාපදිංචි කිරීමේ පෝරමය" : "Student Registration Form"}
           </h2>
           <p className="text-gray-500 text-sm italic">
             {isSi ? "* සලකුණු කර ඇති සියලුම තොරතුරු අනිවාර්ය වේ" : "* All marked fields are required"}
@@ -138,7 +138,7 @@ export default function RegistrationForm({ lang }) {
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-bold text-gray-700 mb-2">Admitted Grade / ඇතුලත් වන ශ්‍රේණිය *</label>
+              <label className="text-sm font-bold text-gray-700 mb-2">Admitted Grade / ඇතුලත් වන ශ්රේණිය *</label>
               <select name="admittedGrade" value={formData.admittedGrade} onChange={handleChange} required className="p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none bg-white text-gray-700">
                 <option value="">Select Grade</option>
                 {[...Array(11)].map((_, i) => (

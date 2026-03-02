@@ -1,33 +1,27 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  body {
-    @apply text-sm md:text-base;
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
   }
-  
-  h1 {
-    @apply text-lg md:text-2xl;
-  }
-  
-  h2 {
-    @apply text-base md:text-xl;
-  }
-  
-  h3 {
-    @apply text-sm md:text-lg;
-  }
-  
-  button {
-    @apply text-xs md:text-sm;
-  }
-  
-  input, select, textarea {
-    @apply text-xs md:text-base;
-  }
-  
-  table {
-    @apply text-xs md:text-sm;
-  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  color:black;
 }
