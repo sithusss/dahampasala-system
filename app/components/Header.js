@@ -10,8 +10,8 @@ export default function Header({ lang, setLang, showNotification, onNotification
   return (
     <header className="w-full shadow-md">
       {/* Top Bar with Language Toggle */}
-      <div className="bg-[#800000] text-white p-2 flex justify-between items-center px-6 md:px-20 text-sm border-b border-gray-800">
-        <div className="flex gap-4 font-semibold uppercase tracking-wider text-xs ">
+      <div className="bg-[#800000] text-white p-2 flex justify-between items-center px-6 md:px-20 text-xs md:text-sm border-b border-gray-800">
+        <div className="flex gap-4 font-semibold uppercase tracking-wider text-[10px] md:text-xs">
             {/* Dynamic Redirect Button */}
           <Link 
             href={isDetailsPage ? "/" : "/details"} 
@@ -23,7 +23,7 @@ export default function Header({ lang, setLang, showNotification, onNotification
             }
           </Link>
         </div>
-        <div className="flex gap-4 items-center font-semibold uppercase tracking-wider text-xs ">
+        <div className="flex gap-4 items-center font-semibold uppercase tracking-wider text-[10px] md:text-xs">
           {showNotification && (
             <button
               onClick={onNotificationClick}
@@ -56,7 +56,7 @@ export default function Header({ lang, setLang, showNotification, onNotification
               className="object-cover rounded-full p-1" // මෙන්න මෙතනින් තමයි රවුම් වෙන්නේ
            />
         </div>
-        <h1 className="text-xl md:text-2xl font-bold text-center text-white px-4 max-w-2xl leading-relaxed">
+        <h1 className="text-sm md:text-2xl font-bold text-center text-white px-4 max-w-2xl leading-relaxed">
           {lang === 'si' ? 'මහනුවර, අස්ගිරිය, ශ්‍රී සද්ධර්මවර්ධන දහම් පාසල' : 'Sri Saddharmawardhana Dhamma School, Asgiriya, Kandy'}
         </h1>
       </div>
