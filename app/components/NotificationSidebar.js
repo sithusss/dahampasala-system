@@ -8,7 +8,9 @@ export default function NotificationSidebar({
   showUpgradeToggle = false,
   autoUpgradeEnabled = true,
   autoUpgradeSaving = false,
-  onAutoUpgradeToggle = () => {}
+  onAutoUpgradeToggle = async (enabled) => {
+    void enabled;
+  }
 }) {
   const isSi = lang === 'si';
 
