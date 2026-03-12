@@ -87,13 +87,15 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header 
-        lang={lang}
-        setLang={setLang}
-        showNotification={['admin', 'super-admin'].includes(userRole || '')}
-        onNotificationClick={() => setSidebarOpen(!sidebarOpen)}
-        notificationCount={pendingUsers.length}
-      />
+      {isLoggedIn && (
+        <Header 
+          lang={lang}
+          setLang={setLang}
+          showNotification={['admin', 'super-admin'].includes(userRole || '')}
+          onNotificationClick={() => setSidebarOpen(!sidebarOpen)}
+          notificationCount={pendingUsers.length}
+        />
+      )}
 
       <NotificationSidebar
         isOpen={sidebarOpen}

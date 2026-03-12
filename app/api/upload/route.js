@@ -2,8 +2,6 @@ import { google } from 'googleapis';
 import { NextResponse } from 'next/server';
 import { Readable } from 'stream';
 
-// App Router වලදීbodyParser: false අවශ්‍ය නැත. 
-// ඒ වෙනුවට පහත ක්‍රමය භාවිතා කරයි.
 
 export async function POST(req) {
   try {
