@@ -19,10 +19,19 @@ export default function Home() {
   const [autoUpgradeEnabled, setAutoUpgradeEnabled] = useState(true);
   const [autoUpgradeSaving, setAutoUpgradeSaving] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
-  const [lastAutoUpgradeYear, setLastAutoUpgradeYear] = useState<number | null>(null);
+  const [lastAutoUpgradePeriod, setLastAutoUpgradePeriod] = useState<string | null>(null);
+  const [autoUpgradeFrozen, setAutoUpgradeFrozen] = useState(false);
+  const [lastAutoUpgradeDate, setLastAutoUpgradeDate] = useState<Date | null>(null);
   const [autoUpgradeRunning, setAutoUpgradeRunning] = useState(false);
 
   const isAdminUser = ['admin', 'super-admin', 'superadmin'].includes(userRole || '');
+  const isSuperAdmin = userRole === 'super-admin' || userRole === 'superadmin';
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const isJanFirst = now.getMonth() === 0 && now.getDate() === 1;
+  const freezeBySameYear = !!lastAutoUpgradeDate && lastAutoUpgradeDate.getFullYear() === currentYear;
+  const effectiveFrozen = autoUpgradeFrozen || freezeBySameYear;
+  const freezeAppliesToUser = effectiveFrozen && !isSuperAdmin;
 
   useEffect(() => {
     const role = localStorage.getItem('userRole');
@@ -65,17 +74,25 @@ export default function Home() {
 
         if (!settingsSnap.exists()) {
           await setDoc(settingsRef, {
-            autoUpgradeEnabled: true,
-            lastAutoUpgradeYear: null,
+            enable: true,
+            frozen: false,
+            date: null,
+            lastAutoUpgradePeriod: null,
             updatedAt: serverTimestamp()
           }, { merge: true });
           setAutoUpgradeEnabled(true);
-          setLastAutoUpgradeYear(null);
+          setAutoUpgradeFrozen(false);
+          setLastAutoUpgradeDate(null);
+          setLastAutoUpgradePeriod(null);
         } else {
           const data = settingsSnap.data();
-          setAutoUpgradeEnabled(data.autoUpgradeEnabled !== false);
-          setLastAutoUpgradeYear(
-            typeof data.lastAutoUpgradeYear === 'number' ? data.lastAutoUpgradeYear : null
+          setAutoUpgradeEnabled(data.enable !== false);
+          setAutoUpgradeFrozen(data.frozen === true || data.frozen === 'true');
+          setLastAutoUpgradeDate(
+            data.date && typeof data.date.toDate === 'function' ? data.date.toDate() : null
+          );
+          setLastAutoUpgradePeriod(
+            typeof data.lastAutoUpgradePeriod === 'string' ? data.lastAutoUpgradePeriod : null
           );
         }
       } catch (error) {
@@ -89,14 +106,25 @@ export default function Home() {
   }, [isAdminUser]);
 
   useEffect(() => {
-    if (!isAdminUser || !settingsLoaded || !autoUpgradeEnabled || autoUpgradeRunning) return;
+    if (!isAdminUser || !settingsLoaded || !autoUpgradeEnabled || effectiveFrozen || autoUpgradeRunning || !isJanFirst) return;
+
+    const periodKey = `jan1-${currentYear}`;
 
     const runAutoUpgradeIfNeeded = async () => {
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const janFirst = new Date(currentYear, 0, 1);
+      if (lastAutoUpgradePeriod === periodKey) return;
 
-      if (now < janFirst || lastAutoUpgradeYear === currentYear) return;
+      // Re-check live settings from Firestore to avoid stale local state/race conditions.
+      const liveSettingsSnap = await getDoc(doc(db, 'system_settings', 'grade_upgrade'));
+      if (liveSettingsSnap.exists()) {
+        const live = liveSettingsSnap.data();
+        const liveFrozen = live?.frozen === true || live?.frozen === 'true';
+        const liveEnabled = live?.enable !== false;
+        if (liveFrozen || !liveEnabled) {
+          setAutoUpgradeFrozen(liveFrozen);
+          setAutoUpgradeEnabled(liveEnabled);
+          return;
+        }
+      }
 
       setAutoUpgradeRunning(true);
       try {
@@ -119,14 +147,20 @@ export default function Home() {
 
         await batch.commit();
 
+        const now = new Date();
         await setDoc(doc(db, 'system_settings', 'grade_upgrade'), {
-          lastAutoUpgradeYear: currentYear,
-          lastAutoUpgradeAt: serverTimestamp(),
+          enable: true,
+          frozen: true,
+          date: serverTimestamp(),
+          lastAutoUpgradePeriod: periodKey,
           updatedAt: serverTimestamp()
         }, { merge: true });
 
-        setLastAutoUpgradeYear(currentYear);
-        toast.success('Students were automatically upgraded for the new year.');
+        setLastAutoUpgradePeriod(periodKey);
+        setAutoUpgradeFrozen(true);
+        setLastAutoUpgradeDate(now);
+
+        toast.success('Annual automatic upgrade completed successfully!');
       } catch (error: any) {
         toast.error('Auto-upgrade failed: ' + error.message);
       } finally {
@@ -135,13 +169,27 @@ export default function Home() {
     };
 
     runAutoUpgradeIfNeeded();
-  }, [isAdminUser, settingsLoaded, autoUpgradeEnabled, autoUpgradeRunning, lastAutoUpgradeYear]);
+  }, [
+    isAdminUser,
+    settingsLoaded,
+    autoUpgradeEnabled,
+    effectiveFrozen,
+    autoUpgradeRunning,
+    isJanFirst,
+    lastAutoUpgradePeriod,
+    currentYear
+  ]);
 
   const handleAutoUpgradeToggle = async (enabled: boolean) => {
+    if (freezeAppliesToUser) {
+      toast.error('Auto-upgrade setting is locked until Dec 31.');
+      return;
+    }
+
     setAutoUpgradeSaving(true);
     try {
       await setDoc(doc(db, 'system_settings', 'grade_upgrade'), {
-        autoUpgradeEnabled: enabled,
+        enable: enabled,
         updatedAt: serverTimestamp()
       }, { merge: true });
       setAutoUpgradeEnabled(enabled);
@@ -214,7 +262,8 @@ export default function Home() {
         lang={lang}
         showUpgradeToggle={isAdminUser}
         autoUpgradeEnabled={autoUpgradeEnabled}
-        autoUpgradeSaving={autoUpgradeSaving}
+        autoUpgradeSaving={autoUpgradeSaving || freezeAppliesToUser}
+        autoUpgradeFrozen={freezeAppliesToUser}
         onAutoUpgradeToggle={handleAutoUpgradeToggle}
       />
 
