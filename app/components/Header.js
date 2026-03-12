@@ -48,12 +48,12 @@ export default function Header({ lang, setLang, showNotification, onNotification
       {/* Logo Section */}
       <div className="flex flex-col items-center py-5 md:py-8 bg-gray-900">
         {/* Rounded Logo Container */}
-        <div className="relative w-20 h-20 md:w-28 md:h-28 mb-3 md:mb-4 border-2 border-white rounded-full overflow-hidden flex items-center justify-center bg-white">
+        <div className="relative w-30 h-30 md:w-28 md:h-28 mb-3 md:mb-4 border-2 border-white rounded-full overflow-hidden flex items-center justify-center bg-white">
            <Image 
-              src="/images/logo.jpg" 
+              src="/images/dahampasala.png" 
               alt="Logo" 
-              fill // Container එකට ගැලපෙන ලෙස image එක සකසයි
-              className="object-cover rounded-full p-1" // මෙන්න මෙතනින් තමයි රවුම් වෙන්නේ
+              fill 
+              className="object-cover rounded-full p-1" 
            />
         </div>
         <h1 className="text-base md:text-2xl font-bold text-center text-white px-3 md:px-4 max-w-2xl leading-relaxed">

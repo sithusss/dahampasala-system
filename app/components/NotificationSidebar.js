@@ -1,4 +1,15 @@
-export default function NotificationSidebar({ isOpen, onClose, pendingUsers, onAccept, onDecline, lang }) {
+export default function NotificationSidebar({
+  isOpen,
+  onClose,
+  pendingUsers,
+  onAccept,
+  onDecline,
+  lang,
+  showUpgradeToggle = false,
+  autoUpgradeEnabled = true,
+  autoUpgradeSaving = false,
+  onAutoUpgradeToggle = () => {}
+}) {
   const isSi = lang === 'si';
 
   return (
@@ -13,6 +24,43 @@ export default function NotificationSidebar({ isOpen, onClose, pendingUsers, onA
               </svg>
             </button>
           </div>
+
+          {showUpgradeToggle && (
+            <div className="mb-5 p-4 bg-gray-50 border border-gray-200 rounded-xl">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-bold text-gray-800 leading-tight">
+                  {isSi
+                    ? (autoUpgradeEnabled ? 'ස්වයංක්‍රීය ශ්‍රේණි උසස් කිරීම: සක්‍රියයි' : 'ස්වයංක්‍රීය ශ්‍රේණි උසස් කිරීම: අක්‍රියයි')
+                    : (autoUpgradeEnabled ? 'Automatic Grade Upgrade: Enabled' : 'Automatic Grade Upgrade: Disabled')}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onAutoUpgradeToggle(!autoUpgradeEnabled)}
+                  disabled={autoUpgradeSaving}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-all duration-200 shadow-sm ${
+                    autoUpgradeEnabled ? 'bg-green-600 border-green-700' : 'bg-gray-300 border-gray-400'
+                  } ${autoUpgradeSaving ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  aria-label={isSi ? 'ස්වයංක්රීය උසස් කිරීම ටොගල් කරන්න' : 'Toggle auto upgrade'}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                      autoUpgradeEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+                {isSi
+                  ? (autoUpgradeEnabled
+                    ?'සක්‍රියයි: සෑම වසරකම ජනවාරි 1 වන දින සිසුන් ස්වයංක්‍රීයවම ඊළඟ ශ්‍රේණියට උසස් කරනු ලැබේ.':
+                    'අක්‍රියයි: ස්වයංක්‍රීයව ශ්‍රේණි උසස් කිරීම සිදු නොවේ. සිසුන් උසස් කිරීම සඳහා අදාළ බොත්තම් භාවිතයෙන් එය අතින් (Manually) සිදු කළ හැකිය.')
+                  : (autoUpgradeEnabled
+                    ? 'Enabled: Students are upgraded automatically every year on Jan 1. Manual floating grade buttons are hidden.'
+                    : 'Disabled: Automatic yearly upgrade is turned off. Manual floating grade buttons are available.')} 
+              </p>
+            </div>
+          )}
+
           <div className="space-y-4">
             {pendingUsers.length > 0 ? (
               pendingUsers.map((user) => (

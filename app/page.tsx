@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { db, auth } from '@/lib/firebase';
-import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
+import { collection, query, where, getDocs, updateDoc, doc, getDoc, setDoc, writeBatch, serverTimestamp } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import toast from 'react-hot-toast';
 import Header from '@/app/components/Header';
@@ -16,6 +16,13 @@ export default function Home() {
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [lang, setLang] = useState('si');
+  const [autoUpgradeEnabled, setAutoUpgradeEnabled] = useState(true);
+  const [autoUpgradeSaving, setAutoUpgradeSaving] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [lastAutoUpgradeYear, setLastAutoUpgradeYear] = useState<number | null>(null);
+  const [autoUpgradeRunning, setAutoUpgradeRunning] = useState(false);
+
+  const isAdminUser = ['admin', 'super-admin', 'superadmin'].includes(userRole || '');
 
   useEffect(() => {
     const role = localStorage.getItem('userRole');
@@ -44,6 +51,107 @@ export default function Home() {
       return () => clearInterval(interval);
     }
   }, [userRole]);
+
+  useEffect(() => {
+    if (!isAdminUser) {
+      setSettingsLoaded(true);
+      return;
+    }
+
+    const fetchSettings = async () => {
+      try {
+        const settingsRef = doc(db, "system_settings", "grade_upgrade");
+        const settingsSnap = await getDoc(settingsRef);
+
+        if (!settingsSnap.exists()) {
+          await setDoc(settingsRef, {
+            autoUpgradeEnabled: true,
+            lastAutoUpgradeYear: null,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+          setAutoUpgradeEnabled(true);
+          setLastAutoUpgradeYear(null);
+        } else {
+          const data = settingsSnap.data();
+          setAutoUpgradeEnabled(data.autoUpgradeEnabled !== false);
+          setLastAutoUpgradeYear(
+            typeof data.lastAutoUpgradeYear === 'number' ? data.lastAutoUpgradeYear : null
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching grade upgrade settings:', error);
+      } finally {
+        setSettingsLoaded(true);
+      }
+    };
+
+    fetchSettings();
+  }, [isAdminUser]);
+
+  useEffect(() => {
+    if (!isAdminUser || !settingsLoaded || !autoUpgradeEnabled || autoUpgradeRunning) return;
+
+    const runAutoUpgradeIfNeeded = async () => {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const janFirst = new Date(currentYear, 0, 1);
+
+      if (now < janFirst || lastAutoUpgradeYear === currentYear) return;
+
+      setAutoUpgradeRunning(true);
+      try {
+        const studentsSnap = await getDocs(collection(db, 'students'));
+        const batch = writeBatch(db);
+
+        studentsSnap.forEach((studentDoc) => {
+          const student = studentDoc.data();
+          const currentGrade = Number(student.admittedGrade);
+
+          if (Number.isNaN(currentGrade) || currentGrade >= 11) return;
+
+          batch.set(doc(db, 'students', studentDoc.id), {
+            ...student,
+            admittedGrade: currentGrade + 1,
+            previousGrade: currentGrade,
+            autoUpgradedAt: serverTimestamp()
+          }, { merge: true });
+        });
+
+        await batch.commit();
+
+        await setDoc(doc(db, 'system_settings', 'grade_upgrade'), {
+          lastAutoUpgradeYear: currentYear,
+          lastAutoUpgradeAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        setLastAutoUpgradeYear(currentYear);
+        toast.success('Students were automatically upgraded for the new year.');
+      } catch (error: any) {
+        toast.error('Auto-upgrade failed: ' + error.message);
+      } finally {
+        setAutoUpgradeRunning(false);
+      }
+    };
+
+    runAutoUpgradeIfNeeded();
+  }, [isAdminUser, settingsLoaded, autoUpgradeEnabled, autoUpgradeRunning, lastAutoUpgradeYear]);
+
+  const handleAutoUpgradeToggle = async (enabled: boolean) => {
+    setAutoUpgradeSaving(true);
+    try {
+      await setDoc(doc(db, 'system_settings', 'grade_upgrade'), {
+        autoUpgradeEnabled: enabled,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      setAutoUpgradeEnabled(enabled);
+      toast.success(enabled ? 'Auto-upgrade enabled.' : 'Auto-upgrade disabled.');
+    } catch (error: any) {
+      toast.error('Error: ' + error.message);
+    } finally {
+      setAutoUpgradeSaving(false);
+    }
+  };
 
   const handleAccept = async (userId: string) => {
     try {
@@ -104,6 +212,10 @@ export default function Home() {
         onAccept={handleAccept}
         onDecline={handleDecline}
         lang={lang}
+        showUpgradeToggle={isAdminUser}
+        autoUpgradeEnabled={autoUpgradeEnabled}
+        autoUpgradeSaving={autoUpgradeSaving}
+        onAutoUpgradeToggle={handleAutoUpgradeToggle}
       />
 
       <div className="flex-grow">
