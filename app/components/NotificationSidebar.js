@@ -8,6 +8,7 @@ export default function NotificationSidebar({
   showUpgradeToggle = false,
   autoUpgradeEnabled = true,
   autoUpgradeSaving = false,
+  autoUpgradeFrozen = false,
   onAutoUpgradeToggle = async (enabled) => {
     void enabled;
   }
@@ -28,37 +29,59 @@ export default function NotificationSidebar({
           </div>
 
           {showUpgradeToggle && (
-            <div className="mb-5 p-4 bg-gray-50 border border-gray-200 rounded-xl">
+            <div className={`mb-5 p-4 border rounded-xl ${autoUpgradeFrozen ? 'bg-gray-100 border-gray-300 opacity-75' : 'bg-gray-50 border-gray-200'}`}>
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-bold text-gray-800 leading-tight">
+                <p className={`text-sm font-bold leading-tight flex items-center gap-1 ${autoUpgradeFrozen ? 'text-gray-500' : 'text-gray-800'}`}>
+                  {autoUpgradeFrozen && (
+                    <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 1C8.676 1 6 3.676 6 7v1H4a1 1 0 00-1 1v13a1 1 0 001 1h16a1 1 0 001-1V9a1 1 0 00-1-1h-2V7c0-3.324-2.676-6-6-6zm0 2c2.276 0 4 1.724 4 4v1H8V7c0-2.276 1.724-4 4-4zm0 9a2 2 0 110 4 2 2 0 010-4z" />
+                    </svg>
+                  )}
                   {isSi
-                    ? (autoUpgradeEnabled ? 'ස්වයංක්‍රීය ශ්‍රේණි උසස් කිරීම: සක්‍රියයි' : 'ස්වයංක්‍රීය ශ්‍රේණි උසස් කිරීම: අක්‍රියයි')
-                    : (autoUpgradeEnabled ? 'Automatic Grade Upgrade: Enabled' : 'Automatic Grade Upgrade: Disabled')}
+                    ? (autoUpgradeFrozen
+                        ? 'ස්වයංක්‍රීය ශ්‍රේණි උසස් කිරීම: අගුලු දමා ඇත'
+                        : autoUpgradeEnabled
+                          ? 'ස්වයංක්‍රීය ශ්‍රේණි උසස් කිරීම: සක්‍රියයි'
+                          : 'ස්වයංක්‍රීය ශ්‍රේණි උසස් කිරීම: අක්‍රියයි')
+                    : (autoUpgradeFrozen
+                        ? 'Automatic Grade Upgrade: Locked'
+                        : autoUpgradeEnabled
+                          ? 'Automatic Grade Upgrade: Enabled'
+                          : 'Automatic Grade Upgrade: Disabled')}
                 </p>
                 <button
                   type="button"
-                  onClick={() => onAutoUpgradeToggle(!autoUpgradeEnabled)}
-                  disabled={autoUpgradeSaving}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-all duration-200 shadow-sm ${
-                    autoUpgradeEnabled ? 'bg-green-600 border-green-700' : 'bg-gray-300 border-gray-400'
-                  } ${autoUpgradeSaving ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  onClick={() => !autoUpgradeFrozen && !autoUpgradeSaving && onAutoUpgradeToggle(!autoUpgradeEnabled)}
+                  disabled={autoUpgradeSaving || autoUpgradeFrozen}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full border transition-all duration-200 shadow-sm cursor-not-allowed ${
+                    autoUpgradeFrozen
+                      ? 'bg-gray-300 border-gray-400'
+                      : autoUpgradeEnabled
+                        ? 'bg-green-600 border-green-700 cursor-pointer'
+                        : 'bg-gray-300 border-gray-400 cursor-pointer'
+                  } ${autoUpgradeSaving ? 'opacity-60' : ''}`}
                   aria-label={isSi ? 'ස්වයංක්රීය උසස් කිරීම ටොගල් කරන්න' : 'Toggle auto upgrade'}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                      autoUpgradeEnabled ? 'translate-x-6' : 'translate-x-1'
+                    className={`inline-block h-4 w-4 transform rounded-full transition ${
+                      autoUpgradeFrozen ? 'bg-gray-400 translate-x-6' : autoUpgradeEnabled ? 'bg-white translate-x-6' : 'bg-white translate-x-1'
                     }`}
                   />
                 </button>
               </div>
-              <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+              <p className={`text-xs mt-2 leading-relaxed ${autoUpgradeFrozen ? 'text-gray-500' : 'text-gray-600'}`}>
                 {isSi
-                  ? (autoUpgradeEnabled
-                    ?'සක්‍රියයි: සෑම වසරකම ජනවාරි 1 වන දින සිසුන් ස්වයංක්‍රීයවම ඊළඟ ශ්‍රේණියට උසස් කරනු ලැබේ.':
-                    'අක්‍රියයි: ස්වයංක්‍රීයව ශ්‍රේණි උසස් කිරීම සිදු නොවේ. සිසුන් උසස් කිරීම සඳහා අදාළ බොත්තම් භාවිතයෙන් එය අතින් (Manually) සිදු කළ හැකිය.')
-                  : (autoUpgradeEnabled
-                    ? 'Enabled: Students are upgraded automatically every year on Jan 1. Manual floating grade buttons are hidden.'
-                    : 'Disabled: Automatic yearly upgrade is turned off. Manual floating grade buttons are available.')} 
+                  ? (autoUpgradeFrozen
+                    ? 'අගුලු දමා ඇත: මේ වසර සඳහා ස්වයංක්‍රීය උසස් කිරීම දැනටමත් සිදු කර ඇත. දෙසැම්බර් 31 දක්වා මෙම සැකසීම වෙනස් කළ නොහැක.'
+                    : autoUpgradeEnabled
+                      ? 'සක්‍රියයි: සෑම වසරකම ජනවාරි 1 වන දින සිසුන් ස්වයංක්‍රීයවම ඊළඟ ශ්‍රේණියට උසස් කරනු ලැබේ.'
+                      : 'අක්‍රියයි: ස්වයංක්‍රීය උසස් කිරීම ක්‍රියාවිරහිතයි. ඔබට අතින් (Manual) ශ්‍රේණි යාවත්කාලීන කළ හැකිය.')
+                  : (autoUpgradeFrozen
+                    ? 'Locked: Auto-upgrade completed for this year. Toggle is frozen until Dec 31.'
+                    : autoUpgradeEnabled
+                      ? 'Enabled: Automatic upgrades occur every Jan 1st. Manual grade buttons are hidden.'
+                      : 'Disabled: Manual upgrades are required. Manual grade buttons are available.')
+                }
               </p>
             </div>
           )}

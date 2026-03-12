@@ -32,6 +32,9 @@ export default function DetailsPage() {
   const [anyUserNextClass, setAnyUserNextClass] = useState(false);
   const [currentUserNextClass, setCurrentUserNextClass] = useState(false);
   const [autoUpgradeEnabled, setAutoUpgradeEnabled] = useState(true);
+  const [autoUpgradeFrozen, setAutoUpgradeFrozen] = useState(false);
+  const isAdminOrSuperAdmin = ['admin', 'super-admin', 'superadmin'].includes(userRole || '');
+  const isSuperAdmin = userRole === 'super-admin' || userRole === 'superadmin';
 
   useEffect(() => {
     const role = localStorage.getItem('userRole');
@@ -126,7 +129,8 @@ export default function DetailsPage() {
       }
 
       const data = settingsSnap.data();
-      setAutoUpgradeEnabled(data.autoUpgradeEnabled !== false);
+      setAutoUpgradeEnabled(data.enable !== false);
+      setAutoUpgradeFrozen(data.frozen === true);
     });
 
     return () => unsubscribe();
@@ -475,7 +479,7 @@ export default function DetailsPage() {
 
       <Footer />
 
-      {!autoUpgradeEnabled && (
+      {isAdminOrSuperAdmin && (((!autoUpgradeEnabled && !autoUpgradeFrozen) || isSuperAdmin)) && (
         <div className="fixed bottom-6 right-6 flex flex-col gap-3">
           <button
             onClick={() => setShowNextClassConfirm(true)}
