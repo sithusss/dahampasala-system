@@ -31,6 +31,7 @@ export default function DetailsPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [anyUserNextClass, setAnyUserNextClass] = useState(false);
   const [currentUserNextClass, setCurrentUserNextClass] = useState(false);
+  const [autoUpgradeEnabled, setAutoUpgradeEnabled] = useState(true);
 
   useEffect(() => {
     const role = localStorage.getItem('userRole');
@@ -113,6 +114,21 @@ export default function DetailsPage() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setAnyUserNextClass(!snapshot.empty);
     });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const settingsRef = doc(db, "system_settings", "grade_upgrade");
+    const unsubscribe = onSnapshot(settingsRef, (settingsSnap) => {
+      if (!settingsSnap.exists()) {
+        setAutoUpgradeEnabled(true);
+        return;
+      }
+
+      const data = settingsSnap.data();
+      setAutoUpgradeEnabled(data.autoUpgradeEnabled !== false);
+    });
+
     return () => unsubscribe();
   }, []);
 
@@ -459,40 +475,42 @@ export default function DetailsPage() {
 
       <Footer />
 
-      <div className="fixed bottom-6 right-6 flex flex-col gap-3">
-        <button
-          onClick={() => setShowNextClassConfirm(true)}
-          disabled={(anyUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || currentUserNextClass}
-          className={`p-3 md:px-4 md:py-3 text-white text-sm font-bold rounded-full shadow-lg transition flex items-center gap-0 md:gap-2 ${
-            ((anyUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || currentUserNextClass)
-              ? 'bg-gray-400 cursor-not-allowed' 
-              : 'bg-blue-600 hover:bg-blue-700'
-          }`}
-          title={lang === 'si' ? 'ඊළඟ ශ්‍රේණියට' : 'To Next Class'}
-          aria-label={lang === 'si' ? 'ඊළඟ ශ්‍රේණිය' : 'Next Class'}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </svg>
-          <span className="w-0 md:w-auto overflow-hidden md:overflow-visible">{lang === 'si' ? 'ඊළඟ ශ්‍රේණිය' : 'Next Class'}</span>
-        </button>
-        <button
-          onClick={() => setShowResetConfirm(true)}
-          disabled={(!currentUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || !anyUserNextClass}
-          className={`p-3 md:px-4 md:py-3 text-white text-sm font-bold rounded-full shadow-lg transition flex items-center gap-0 md:gap-2 ${
-            ((!currentUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || !anyUserNextClass)
-              ? 'bg-gray-400 cursor-not-allowed' 
-              : 'bg-orange-600 hover:bg-orange-700'
-          }`}
-          title={lang === 'si' ? 'නැවත පෙර තත්වයට' : 'Undo'}
-          aria-label={lang === 'si' ? 'නැවත පෙර තත්වයට' : 'Undo'}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          <span className="w-0 md:w-auto overflow-hidden md:overflow-visible">{lang === 'si' ? 'පෙර තත්වයට' : 'Undo'}</span>
-        </button>
-      </div>
+      {!autoUpgradeEnabled && (
+        <div className="fixed bottom-6 right-6 flex flex-col gap-3">
+          <button
+            onClick={() => setShowNextClassConfirm(true)}
+            disabled={(anyUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || currentUserNextClass}
+            className={`p-3 md:px-4 md:py-3 text-white text-sm font-bold rounded-full shadow-lg transition flex items-center gap-0 md:gap-2 ${
+              ((anyUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || currentUserNextClass)
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-blue-600 hover:bg-blue-700'
+            }`}
+            title={lang === 'si' ? 'ඊළඟ ශ්‍රේණියට' : 'To Next Class'}
+            aria-label={lang === 'si' ? 'ඊළඟ ශ්‍රේණිය' : 'Next Class'}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+            <span className="w-0 md:w-auto overflow-hidden md:overflow-visible">{lang === 'si' ? 'ඊළඟ ශ්‍රේණිය' : 'Next Class'}</span>
+          </button>
+          <button
+            onClick={() => setShowResetConfirm(true)}
+            disabled={(!currentUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || !anyUserNextClass}
+            className={`p-3 md:px-4 md:py-3 text-white text-sm font-bold rounded-full shadow-lg transition flex items-center gap-0 md:gap-2 ${
+              ((!currentUserNextClass && !['super-admin', 'superadmin', 'admin'].includes(userRole)) || !anyUserNextClass)
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-orange-600 hover:bg-orange-700'
+            }`}
+            title={lang === 'si' ? 'නැවත පෙර තත්වයට' : 'Undo'}
+            aria-label={lang === 'si' ? 'නැවත පෙර තත්වයට' : 'Undo'}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span className="w-0 md:w-auto overflow-hidden md:overflow-visible">{lang === 'si' ? 'පෙර තත්වයට' : 'Undo'}</span>
+          </button>
+        </div>
+      )}
 
       {isViewOpen && activeStudent && (
         <ViewModal student={activeStudent} isOpen={isViewOpen} onClose={() => setIsViewOpen(false)} lang={lang} />
