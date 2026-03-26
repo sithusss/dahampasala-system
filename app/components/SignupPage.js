@@ -2,10 +2,27 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { auth, db } from '@/lib/firebase';
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, deleteUser, signOut } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+
+const FRIENDLY_SIGNUP_ERRORS = {
+  'auth/operation-not-allowed': 'Email/Password sign-in is disabled. Enable it in Firebase Console > Authentication > Sign-in method.',
+  'auth/invalid-api-key': 'Invalid Firebase API key. Re-check NEXT_PUBLIC_FIREBASE_API_KEY in .env.local and restart the dev server.',
+  'auth/configuration-not-found': 'Authentication is not configured for this Firebase project. In Firebase Console: 1) Build > Authentication > Get started, 2) Sign-in method > enable Email/Password, 3) Settings > Authorized domains > add localhost, then restart npm run dev.',
+  'auth/email-already-in-use': 'This email is already registered.',
+  'auth/weak-password': 'Password is too weak. Use at least 6 characters.',
+  'auth/network-request-failed': 'Network error while contacting Firebase. Check internet or firewall.',
+  'permission-denied': 'Firestore rules blocked user profile creation. Allow signed-in users to write to user/{uid}.',
+  'not-found': 'Firestore database not found for this project. Create a Firestore database in Firebase Console.'
+};
+
+function getSignupErrorMessage(error) {
+  const code = error?.code;
+  if (code && FRIENDLY_SIGNUP_ERRORS[code]) return FRIENDLY_SIGNUP_ERRORS[code];
+  return error?.message || 'Signup failed.';
+}
 
 export default function SignupPage() {
   const [loading, setLoading] = useState(false);
@@ -31,12 +48,13 @@ export default function SignupPage() {
     }
 
     setLoading(true);
+    let createdUser = null;
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email.trim(), formData.password);
-      const user = userCredential.user;
+      createdUser = userCredential.user;
 
-      await setDoc(doc(db, "user", user.uid), {
-        uid: user.uid,
+      await setDoc(doc(db, "user", createdUser.uid), {
+        uid: createdUser.uid,
         full_name: formData.fullName,
         phone: formData.phone,
         email: formData.email.trim(),
@@ -49,7 +67,18 @@ export default function SignupPage() {
       toast.success("ලියාපදිංචිය සාර්ථකයි! Admin අනුමැතිය අවශ්‍යයි.");
       router.push('/');
     } catch (error) {
-      toast.error("Signup Error: " + error.message);
+      console.error('Signup failed:', error);
+
+      // If Auth user was created but Firestore write failed, roll back the Auth user.
+      if (createdUser && !String(error?.code || '').startsWith('auth/')) {
+        try {
+          await deleteUser(createdUser);
+        } catch {
+          await signOut(auth);
+        }
+      }
+
+      toast.error(getSignupErrorMessage(error));
     } finally {
       setLoading(false);
     }

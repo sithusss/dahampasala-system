@@ -1,13 +1,15 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase'; 
+import { db, storage } from '@/lib/firebase'; 
 import { collection, query, where, onSnapshot, doc, setDoc, getDoc } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import toast from 'react-hot-toast';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ViewModal from '../components/ViewModal';
 import EditModal from '../components/EditModal';
 import LeaveConfirmModal from '../components/LeaveConfirmModal';
+import { generateAllStudentsPDF } from '@/lib/generatePDF';
 
 export default function DetailsPage() {
   const [selectedGrade, setSelectedGrade] = useState(1);
@@ -61,16 +63,17 @@ export default function DetailsPage() {
   }, []);
 
   useEffect(() => {
-    const q = query(
-      collection(db, "students"), 
-      where("admittedGrade", "in", [Number(selectedGrade), selectedGrade.toString()])
-    );
+    const q = query(collection(db, "students"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const studentList = snapshot.docs.map(doc => ({
+      const selected = Number(selectedGrade);
+      const studentList = snapshot.docs
+      .map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      }))
+      .filter((s) => Number(s.currentGrade ?? s.admittedGrade) === selected);
+
       setStudents(studentList.filter(s => s.status !== 'Leave'));
       setLeftStudents(studentList.filter(s => s.status === 'Leave'));
       setLoading(false);
@@ -136,19 +139,46 @@ export default function DetailsPage() {
     return () => unsubscribe();
   }, []);
 
-  const confirmLeave = async () => {
+  const confirmLeave = async (leaveData) => {
+    if (!isAdminOrSuperAdmin) {
+      toast.error(lang === 'si' ? 'මෙම ක්‍රියාවට අවසර නැත.' : 'You do not have permission for this action.');
+      return;
+    }
+
     if (activeStudent) {
       try {
+        const actor = localStorage.getItem('userEmail') || localStorage.getItem('userId') || 'unknown';
         const leftDate = new Date().toISOString();
+        let leaveDocumentUrls = [];
+
+        if (leaveData?.documentImages?.length) {
+          leaveDocumentUrls = await Promise.all(
+            leaveData.documentImages.map(async (file, index) => {
+              const storageRef = ref(
+                storage,
+                `leave-documents/${activeStudent.id}/${Date.now()}_${index}_${file.name}`
+              );
+              const snapshot = await uploadBytes(storageRef, file);
+              return getDownloadURL(snapshot.ref);
+            })
+          );
+        }
         
         await setDoc(doc(db, "students", activeStudent.id), {
           ...activeStudent,
           status: "Leave",
-          leftDate: leftDate
+          leftDate: leftDate,
+          editedBy: actor,
+          leaveReasonType: leaveData?.leaveReasonType || '',
+          leaveReason: leaveData?.leaveReason || '',
+          leaveCurrentGrade: leaveData?.currentGrade ?? Number(activeStudent.currentGrade ?? activeStudent.admittedGrade),
+          leaveDocumentUrls,
+          facedFinalExam: !!leaveData?.facedFinalExam,
+          finalExamResults: leaveData?.finalExamResults || {}
         }, { merge: true });
         
         setIsLeaveOpen(false);
-        toast.success("Student status updated to Leave!");
+        toast.success(lang === 'si' ? 'සිසුවා Leave ලෙස සුරකින ලදි!' : 'Student status updated to Leave!');
       } catch (error) {
         toast.error("Error: " + error.message);
       }
@@ -206,6 +236,19 @@ export default function DetailsPage() {
     toast.success('CSV Downloaded!');
   };
 
+  const handleDownloadAllPDFs = () => {
+  const dataToPrint = activeTab === 'active' ? students : leftStudents;
+  const userEmail = localStorage.getItem('userEmail') || 'System';
+  
+  if (dataToPrint.length === 0) {
+    toast.error('No students to print');
+    return;
+  }
+  
+  generateAllStudentsPDF(dataToPrint, lang, userEmail);
+  setShowDropdown(false);
+};
+
   const handleDownloadCSV = (type) => {
     if (type === 'all') {
       const dataToDownload = activeTab === 'active' 
@@ -224,15 +267,18 @@ export default function DetailsPage() {
     
     try {
       const userId = localStorage.getItem('userId');
+      const actor = localStorage.getItem('userEmail') || userId || 'unknown';
       const buttonDate = new Date().toISOString().split('T')[0];
       
       for (const student of allStudents) {
-        const currentGrade = Number(student.admittedGrade);
+        const currentGrade = Number(student.currentGrade ?? student.admittedGrade);
         const newGrade = currentGrade >= 11 ? null : currentGrade + 1;
         await setDoc(doc(db, "students", student.id), {
           ...student,
-          admittedGrade: newGrade,
-          previousGrade: currentGrade
+          currentGrade: newGrade,
+          gradeBeforeUpgrade: currentGrade,
+          previousGrade: null,
+          editedBy: actor
         }, { merge: true });
       }
       
@@ -252,12 +298,24 @@ export default function DetailsPage() {
     
     try {
       const userId = localStorage.getItem('userId');
-      const studentsWithPrevGrade = allStudents.filter(s => s.previousGrade);
+      const actor = localStorage.getItem('userEmail') || userId || 'unknown';
+      const studentsWithPrevGrade = allStudents.filter(
+        s =>
+          (s.gradeBeforeUpgrade !== undefined && s.gradeBeforeUpgrade !== null) ||
+          (s.previousGrade !== undefined && s.previousGrade !== null)
+      );
       
       for (const student of studentsWithPrevGrade) {
+        const restoreGrade =
+          student.gradeBeforeUpgrade !== undefined && student.gradeBeforeUpgrade !== null
+            ? student.gradeBeforeUpgrade
+            : student.previousGrade;
+
         await setDoc(doc(db, "students", student.id), {
           ...student,
-          admittedGrade: student.previousGrade,
+          currentGrade: restoreGrade,
+          gradeBeforeUpgrade: null,
+          editedBy: actor,
           previousGrade: null
         }, { merge: true });
       }
@@ -386,6 +444,15 @@ export default function DetailsPage() {
                   >
                     {lang === 'si' ? 'සියලු ශ්‍රේණි' : 'All Grades'}
                   </button>
+                  <button
+                    onClick={handleDownloadAllPDFs}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-100 text-sm font-semibold text-blue-700 rounded-b-lg transition border-t flex items-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    {lang === 'si' ? 'සියලු PDF බාගන්න' : 'Download All PDFs'}
+                  </button>
                 </div>
               )}
             </div>
@@ -441,9 +508,11 @@ export default function DetailsPage() {
                           <button onClick={() => handleEdit(student)} className="px-3 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600">
                             {lang === 'si' ? 'සංස්කරණය' : 'Edit'}
                           </button>
-                          <button onClick={() => handleLeaveClick(student)} className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
-                            {lang === 'si' ? 'ඉවත් කරන්න' : 'Leave'}
-                          </button>
+                          {isAdminOrSuperAdmin && (
+                            <button onClick={() => handleLeaveClick(student)} className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
+                              {lang === 'si' ? 'ඉවත් කරන්න' : 'Leave'}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -528,6 +597,7 @@ export default function DetailsPage() {
         <LeaveConfirmModal
           isOpen={isLeaveOpen}
           studentName={activeStudent.fullName}
+          currentGrade={activeStudent.currentGrade ?? activeStudent.admittedGrade}
           onConfirm={confirmLeave}
           onClose={() => setIsLeaveOpen(false)}
           lang={lang}
