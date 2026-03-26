@@ -133,14 +133,16 @@ export default function Home() {
 
         studentsSnap.forEach((studentDoc) => {
           const student = studentDoc.data();
-          const currentGrade = Number(student.admittedGrade);
+          const currentGrade = Number(student.currentGrade ?? student.admittedGrade);
 
           if (Number.isNaN(currentGrade) || currentGrade >= 11) return;
 
           batch.set(doc(db, 'students', studentDoc.id), {
             ...student,
-            admittedGrade: currentGrade + 1,
-            previousGrade: currentGrade,
+            currentGrade: currentGrade + 1,
+            gradeBeforeUpgrade: currentGrade,
+            editedBy: 'system-auto-upgrade',
+            previousGrade: null,
             autoUpgradedAt: serverTimestamp()
           }, { merge: true });
         });

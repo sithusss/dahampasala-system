@@ -1,7 +1,7 @@
 "use client";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { db, storage } from '@/lib/firebase'; 
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, getDocs, limit, query, setDoc, serverTimestamp, where } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import toast from 'react-hot-toast';
 
@@ -10,6 +10,8 @@ export default function RegistrationForm({ lang }) {
   const isSi = lang === 'si';
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState(null);
+  const [totalRegisteredCount, setTotalRegisteredCount] = useState(0);
+  const [nextStudentNumber, setNextStudentNumber] = useState('');
 
   const [formData, setFormData] = useState({
     admissionNo: '',
@@ -17,6 +19,7 @@ export default function RegistrationForm({ lang }) {
     fullName: '',
     birthDate: '',
     admittedGrade: '',
+    currentGrade: '',
     permanentAddr: '',
     currentAddr: '',
     mother: '',
@@ -28,16 +31,36 @@ export default function RegistrationForm({ lang }) {
     school: '',
     occupation: '',
     distance: '',
+    admissionPaymentDone: false,
     status: 'Active'
   });
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
+
+  useEffect(() => {
+    const loadNextStudentNumber = async () => {
+      try {
+        const allStudentsSnap = await getDocs(collection(db, "students"));
+        const totalCount = allStudentsSnap.size;
+        const nextCount = totalCount + 1;
+        const next = `SSD-${String(nextCount).padStart(3, '0')}`;
+        setTotalRegisteredCount(totalCount);
+        setNextStudentNumber(next);
+      } catch (error) {
+        console.error("Failed to fetch next student number:", error);
+        setTotalRegisteredCount(0);
+        setNextStudentNumber('SSD-001');
+      }
+    };
+
+    loadNextStudentNumber();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,33 +69,45 @@ export default function RegistrationForm({ lang }) {
     try {
       const adNo = formData.admissionNo.trim();
 
-      if (!adNo) {
-        toast.error(isSi ? "ඇතුලත් වීමේ අංකය ඇතුලත් කරන්න!" : "Please enter Admission Number!");
+      if (!nextStudentNumber) {
+        toast.error(isSi ? "අයදුම් අංකය ජනනය කර නොහැකි විය." : "Could not generate student number.");
         setLoading(false);
         return;
       }
 
-      const docRef = doc(db, "students", adNo);
-      const docSnap = await getDoc(docRef);
+      if (adNo) {
+        const duplicateAdmissionQuery = query(
+          collection(db, "students"),
+          where("admissionNo", "==", adNo),
+          limit(1)
+        );
+        const duplicateAdmissionSnap = await getDocs(duplicateAdmissionQuery);
 
-      if (docSnap.exists()) {
-        toast.error(isSi ? "මෙම ඇතුලත් වීමේ අංකය දැනටමත් පද්ධතියේ පවතී!" : "This Admission Number already exists!", {
-          style: { borderRadius: '10px', background: '#8a0b0b', color: '#fff' }
-        });
-        setLoading(false);
-        return;
+        if (!duplicateAdmissionSnap.empty) {
+          toast.error(isSi ? "මෙම ඇතුලත් වීමේ අංකය දැනටමත් පද්ධතියේ පවතී!" : "This Admission Number already exists!", {
+            style: { borderRadius: '10px', background: '#8a0b0b', color: '#fff' }
+          });
+          setLoading(false);
+          return;
+        }
       }
 
       let imageUrl = "";
 
       if (image) {
-        const storageRef = ref(storage, `students/${adNo}_${Date.now()}`);
+        const fileNameKey = adNo || nextStudentNumber;
+        const storageRef = ref(storage, `students/${fileNameKey}_${Date.now()}`);
         const snapshot = await uploadBytes(storageRef, image);
         imageUrl = await getDownloadURL(snapshot.ref);
       }
 
-      await setDoc(doc(db, "students", adNo), {
+      await setDoc(doc(db, "students", nextStudentNumber), {
         ...formData,
+        admissionNo: adNo,
+        studentNo: nextStudentNumber,
+        currentGrade: formData.admittedGrade,
+        registeredBy: localStorage.getItem('userEmail') || localStorage.getItem('userId') || 'unknown',
+        editedBy: localStorage.getItem('userEmail') || localStorage.getItem('userId') || 'unknown',
         imageUrl: imageUrl,
         createdAt: serverTimestamp(),
       });
@@ -83,12 +118,16 @@ export default function RegistrationForm({ lang }) {
       });
       
       setFormData({
-        admissionNo: '', admissionDate: '', fullName: '', birthDate: '', admittedGrade: '',
+        admissionNo: '', admissionDate: '', fullName: '', birthDate: '', admittedGrade: '', currentGrade: '',
         permanentAddr: '', currentAddr: '', mother: '', motherTP: '',
         father: '', fatherTP: '', guardianName: '', guardianTP: '',
-        school: '', occupation: '', distance: '', status: 'Active'
+        school: '', occupation: '', distance: '', admissionPaymentDone: false, status: 'Active'
       });
       setImage(null);
+      const updatedTotal = totalRegisteredCount + 1;
+      const upcomingCount = updatedTotal + 1;
+      setTotalRegisteredCount(updatedTotal);
+      setNextStudentNumber(`SSD-${String(upcomingCount).padStart(3, '0')}`);
 
     } catch (error) {
       console.error("Registration Error:", error);
@@ -115,11 +154,29 @@ export default function RegistrationForm({ lang }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
+
+          <div className="bg-white border border-gray-300 rounded-lg px-4 py-3">
+            <p className="text-sm font-bold text-gray-700">
+              {isSi ? "දැනට ලියාපදිංචි ප්‍රමාණය:" : "Total Registered Count:"} {totalRegisteredCount}
+            </p>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col">
-              <label className="text-sm font-bold text-gray-700 mb-2">Admission No / ඇතුලත් වීමේ අංකය *</label>
-              <input name="admissionNo" value={formData.admissionNo} onChange={handleChange} type="text" required className="p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none bg-white text-gray-700" />
+              <label className="text-sm font-bold text-gray-700 mb-2">Student No / ශිෂ්‍ය අංකය</label>
+              <input
+                value={nextStudentNumber || "SSD-001"}
+                readOnly
+                type="text"
+                className="p-3 border rounded-lg bg-gray-100 text-gray-700 font-bold"
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-sm font-bold text-gray-700 mb-2 flex items-center justify-between gap-2">
+                <span>Admission No / ඇතුලත් වීමේ අංකය (Optional)</span>
+              </label>
+              <input name="admissionNo" value={formData.admissionNo} onChange={handleChange} type="text" className="p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none bg-white text-gray-700" />
             </div>
 
             <div className="flex flex-col">
@@ -205,11 +262,25 @@ export default function RegistrationForm({ lang }) {
               <label className="text-sm font-bold text-gray-700 mb-2">Distance to Home / නිවසට ඇති දුර *</label>
               <input name="distance" value={formData.distance} onChange={handleChange} type="text" placeholder="e.g. 2km" required className="p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none bg-white text-gray-700" />
             </div>
+
+            <div className="md:col-span-2 flex items-center gap-3 bg-white border border-gray-300 rounded-lg px-4 py-3">
+              <input
+                id="admissionPaymentDone"
+                name="admissionPaymentDone"
+                type="checkbox"
+                checked={!!formData.admissionPaymentDone}
+                onChange={handleChange}
+                className="h-4 w-4"
+              />
+              <label htmlFor="admissionPaymentDone" className="text-sm font-bold text-gray-700">
+                Admission Payment Done / ඇතුලත් කිරීමේ ගෙවීම සම්පූර්ණයි
+              </label>
+            </div>
        
 
           <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-white text-center">
-            <label className="text-sm font-bold text-gray-700 block mb-2">Student&apos;s Image / සිසුවාගේ ඡායාරූපය *</label>
-            <input type="file" accept="image/*" required onChange={(e) => setImage(e.target.files[0])} className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800" />
+            <label className="text-sm font-bold text-gray-700 block mb-2">Student&apos;s Image / සිසුවාගේ ඡායාරූපය (Optional)</label>
+            <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800" />
             {image && <p className="mt-2 text-green-600 text-xs">Selected: {image.name}</p>}
           </div>
 

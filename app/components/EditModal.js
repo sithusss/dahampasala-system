@@ -65,13 +65,21 @@ const handleSubmit = async (e) => {
       // 1. පැරණි පින්තූරය ඉවත් කිරීමේ නිවැරදි ක්‍රමය
       if (editData.imageUrl && editData.imageUrl.includes("firebase")) {
         try {
-          // URL එකෙන් Storage Path එක ලබාගෙන Reference එක සෑදීම
           const oldImageRef = ref(storage, editData.imageUrl);
           await deleteObject(oldImageRef);
           console.log("Old image deleted successfully");
         } catch (deleteError) {
-          // ගොනුව කලින් මැකී ඇත්නම් හෝ සොයාගත නොහැකි නම් මෙය ක්‍රියාත්මක වේ
-          console.error("Delete Error:", deleteError.message);
+          // Object not found (code/object-not-found) means it was already deleted — safe to ignore.
+          // Any other error means the old image was NOT deleted from Storage.
+          if (deleteError.code !== "storage/object-not-found") {
+            console.warn("Old image could not be deleted from Storage:", deleteError.message);
+            toast(
+              isSi
+                ? "පැරණි ඡායාරූපය ඉවත් කිරීමට නොහැකි විය. Storage හි රැඳී ඇත."
+                : "Old image could not be removed from Storage.",
+              { icon: "⚠️", duration: 5000, style: { borderRadius: "10px", background: "#7c3a00", color: "#fff" } }
+            );
+          }
         }
       }
 
@@ -85,6 +93,7 @@ const handleSubmit = async (e) => {
     const studentRef = doc(db, "students", student.id);
     await updateDoc(studentRef, {
       ...editData,
+      editedBy: localStorage.getItem('userEmail') || localStorage.getItem('userId') || 'unknown',
       imageUrl: finalImageUrl
     });
 
@@ -128,7 +137,7 @@ const handleSubmit = async (e) => {
             <div className="flex flex-col md:flex-row items-center gap-6">
               <div className="w-32 h-32 rounded-lg overflow-hidden border-2 border-gray-200 shadow-inner bg-gray-50">
                 <img 
-                  src={previewUrl || "/public/images/placeholder.png"} 
+                  src={previewUrl || "/images/placeholder.png"} 
                   alt="Student Preview" 
                   className="w-full h-full object-cover"
                 />
@@ -151,11 +160,11 @@ const handleSubmit = async (e) => {
           <div className="space-y-4">
             <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] border-b pb-1">Basic Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <InputField labelEn="Admission No" labelSi="ඇතුලත් වීමේ අංකය" name="admissionNo" value={editData.admissionNo} readOnly={true} />
+              <InputField labelEn="Admission No" labelSi="ඇතුලත් වීමේ අංකය" name="admissionNo" value={editData.admissionNo} onChange={handleChange} />
               <InputField labelEn="Admission Date" labelSi="ඇතුලත් වූ දිනය" name="admissionDate" type="date" value={editData.admissionDate} onChange={handleChange} />
               <InputField labelEn="Full Name" labelSi="සම්පූර්ණ නම" name="fullName" value={editData.fullName} onChange={handleChange} className="md:col-span-2" />
               <InputField labelEn="Birth Day" labelSi="උපන්දිනය" name="birthDate" type="date" value={editData.birthDate} onChange={handleChange} />
-              <InputField labelEn="Admitted Grade" labelSi="ශ්‍රේණිය" name="admittedGrade" value={editData.admittedGrade} onChange={handleChange} />
+              <InputField labelEn="Admitted Grade" labelSi="ශ්‍රේණිය" name="admittedGrade" value={editData.admittedGrade} readOnly={true} />
             </div>
           </div>
 
