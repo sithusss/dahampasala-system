@@ -403,7 +403,9 @@ export default function DetailsPage() {
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                {lang === 'si' ? 'ක්‍රියාකාරී සිසුන්' : 'Active Students'}
+                {lang === 'si'
+                  ? `ක්‍රියාකාරී සිසුන් (${students.length})`
+                  : `Active Students (${students.length})`}
               </button>
               <button
                 onClick={() => setActiveTab('left')}
@@ -413,7 +415,9 @@ export default function DetailsPage() {
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                {lang === 'si' ? 'ඉවත් වූ සිසුන්' : 'Left Students'}
+                {lang === 'si'
+                  ? `ඉවත් වූ සිසුන් (${leftStudents.length})`
+                  : `Left Students (${leftStudents.length})`}
               </button>
             </div>
             <div className="relative">
