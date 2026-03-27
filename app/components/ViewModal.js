@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { generateStudentProfilePDF } from '@/lib/generatePDF';
-import toast from 'react-hot-toast';
 
 // තොරතුරු පෙන්වන කුඩා කොටස (Sub-component)
 const InfoField = ({ labelEn, labelSi, value }) => (
@@ -49,6 +48,11 @@ export default function ViewModal({ student, isOpen, onClose, lang }) {
   const [downloading, setDownloading] = useState(false);
   const [officers, setOfficers] = useState({ reg: "System", edit: "N/A" });
   const isSi = lang === 'si';
+  const hasLeaveDetails = Boolean(student?.leaveReason || student?.leftDate);
+  const leftDateDisplay = student?.leftDate
+    ? String(student.leftDate).split('T')[0]
+    : "—";
+  const leaveReasonDisplay = student?.leaveReason || "—";
 
   // නිලධාරීන්ගේ නම් ලබා ගැනීම
   useEffect(() => {
@@ -95,7 +99,7 @@ export default function ViewModal({ student, isOpen, onClose, lang }) {
               <img src={student.imageUrl || "/images/placeholder.png"} className="w-full h-full object-cover" alt="Student" />
             </div>
             <div className={`mt-4 px-4 py-1 rounded-full text-[10px] font-black uppercase ${student.status === 'Leave' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-              {student.status === 'Leave' ? (isSi ? 'ඉවත් වී ඇත' : 'Left') : (isSi ? 'සක්‍රියයි' : 'Active')}
+              {student.status === 'Leave' ? (isSi ? 'ඉවත් වී ඇත' : 'Left') : (isSi ? 'අධ්‍යාපනය ලබයි' : 'Active')}
             </div>
             <div className="mt-6 w-full space-y-4">
                <InfoField labelEn="Admission No" labelSi="ඇතුලත් වීමේ අංකය" value={student.admissionNo} />
@@ -128,6 +132,16 @@ export default function ViewModal({ student, isOpen, onClose, lang }) {
               <InfoField labelEn="Guardian's TP" labelSi="භාරකරුගේ දුරකථනය" value={student.guardianTP} />
               <InfoField labelEn="Occupation" labelSi="භාරකරුගේ රැකියාව" value={student.occupation} />
             </div>
+
+            {hasLeaveDetails && (
+              <div className="bg-red-50 p-4 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-4 border border-red-200">
+                <div className="sm:col-span-2 text-sm font-bold text-red-700">
+                  {isSi ? 'ඉවත් වීමේ තොරතුරු' : 'Leave Details'}
+                </div>
+                <InfoField labelEn="Leave Date" labelSi="ඉවත් වූ දිනය" value={leftDateDisplay} />
+                <InfoField labelEn="Reason for Leave" labelSi="ඉවත් වීමේ හේතුව" value={leaveReasonDisplay} />
+              </div>
+            )}
           </div>
         </div>
 
