@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 export default function NotificationSidebar({
   isOpen,
   onClose,
@@ -14,6 +16,18 @@ export default function NotificationSidebar({
   }
 }) {
   const isSi = lang === 'si';
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  const handleAcceptClick = (user) => {
+    setSelectedUser(user);
+  };
+
+  const handleRoleChoice = async (role) => {
+    if (!selectedUser) return;
+
+    await onAccept(selectedUser.id, role);
+    setSelectedUser(null);
+  };
 
   return (
     <>
@@ -93,7 +107,7 @@ export default function NotificationSidebar({
                   <p className="text-sm font-bold text-gray-800 mb-2">{user.full_name}</p>
                   <p className="text-xs text-gray-600 mb-3">Request for system access</p>
                   <div className="flex gap-2">
-                    <button onClick={() => onAccept(user.id)} className="flex-1 bg-green-600 text-white py-2 px-3 rounded-lg text-xs font-bold hover:bg-green-700">
+                    <button onClick={() => handleAcceptClick(user)} className="flex-1 bg-green-600 text-white py-2 px-3 rounded-lg text-xs font-bold hover:bg-green-700">
                       Accept
                     </button>
                     <button onClick={() => onDecline(user.id)} className="flex-1 bg-red-600 text-white py-2 px-3 rounded-lg text-xs font-bold hover:bg-red-700">
@@ -113,6 +127,43 @@ export default function NotificationSidebar({
 
       {isOpen && (
         <div onClick={onClose} className="fixed inset-0 bg-black bg-opacity-50 z-30"></div>
+      )}
+
+      {selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-white shadow-2xl">
+            <div className="p-5 border-b border-gray-200">
+              <h4 className="text-base font-bold text-gray-900">
+                {isSi ? 'භූමිකාව තෝරන්න' : 'Choose role'}
+              </h4>
+              <p className="mt-1 text-sm text-gray-600">
+                {isSi
+                  ? `${selectedUser.full_name} සඳහා භූමිකාව තෝරන්න.`
+                  : `Select role for ${selectedUser.full_name}.`}
+              </p>
+            </div>
+            <div className="p-5 flex flex-col gap-3">
+              <button
+                onClick={() => handleRoleChoice('admin')}
+                className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 transition"
+              >
+                {isSi ? 'පරිපාලක ලෙස මාරු කරන්න' : 'Mark as admin'}
+              </button>
+              <button
+                onClick={() => handleRoleChoice('editor')}
+                className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700 transition"
+              >
+                {isSi ? 'සංස්කාරක ලෙසම තබන්න' : 'Leave as editor'}
+              </button>
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 transition"
+              >
+                {isSi ? 'අවලංගු කරන්න' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

@@ -203,11 +203,14 @@ export default function Home() {
     }
   };
 
-  const handleAccept = async (userId: string) => {
+  const handleAccept = async (userId: string, role: 'admin' | 'editor' = 'editor') => {
     try {
-      await updateDoc(doc(db, "user", userId), { status: 'active' });
-      setPendingUsers(pendingUsers.filter(user => user.id !== userId));
-      toast.success("User accepted!");
+      await updateDoc(doc(db, "user", userId), {
+        status: 'active',
+        role
+      });
+      setPendingUsers((prev) => prev.filter(user => user.id !== userId));
+      toast.success(role === 'admin' ? 'User accepted as admin!' : 'User accepted as editor!');
     } catch (error: any) {
       toast.error("Error: " + error.message);
     }

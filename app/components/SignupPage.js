@@ -128,7 +128,7 @@ export default function SignupPage() {
                 </button>
               </div>
               <button disabled={loading} className="w-full bg-[#800000] text-white py-3 rounded-xl font-bold hover:bg-black transition-all">
-                {loading ? "Registering..." : "REGISTER AS EDITOR"}
+                {loading ? "Registering..." : "REGISTER"}
               </button>
             </form>
           </div>
