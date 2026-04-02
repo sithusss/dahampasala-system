@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { db, storage } from '@/lib/firebase'; 
-import { collection, query, where, onSnapshot, doc, setDoc, getDocs, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, setDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import toast from 'react-hot-toast';
 import Header from '../components/Header';
@@ -71,6 +71,10 @@ export default function DetailsPage() {
   }, []);
 
   useEffect(() => {
+    if (!userRole) {
+      return;
+    }
+
     const q = query(collection(db, "students"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -91,9 +95,13 @@ export default function DetailsPage() {
     });
 
     return () => unsubscribe();
-  }, [selectedGrade]);
+  }, [selectedGrade, userRole]);
 
   useEffect(() => {
+    if (!userRole) {
+      return;
+    }
+
     const q = query(collection(db, "students"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const allList = snapshot.docs.map(doc => ({
@@ -101,13 +109,15 @@ export default function DetailsPage() {
         ...doc.data()
       }));
       setAllStudents(allList);
+    }, (error) => {
+      console.error("Error fetching all students:", error);
     });
     return () => unsubscribe();
-  }, []);
+  }, [userRole]);
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
-    if (!userId) return;
+    if (!userRole || !userId) return;
     
     const userRef = doc(db, "user", userId);
     const unsubscribe = onSnapshot(userRef, (docSnap) => {
@@ -119,44 +129,29 @@ export default function DetailsPage() {
         setCurrentUserNextClass(false);
         setCanReset(false);
       }
+    }, (error) => {
+      console.error("Error fetching current user next class status:", error);
     });
     return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    const q = query(collection(db, "user"), where("next_class", "==", true));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setAnyUserNextClass(!snapshot.empty);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!(userRole === 'super-admin' || userRole === 'admin')) {
-      setPendingUsers([]);
-      return;
-    }
-
-    const fetchPendingUsers = async () => {
-      try {
-        const q = query(collection(db, "user"), where("status", "==", "pending"));
-        const querySnapshot = await getDocs(q);
-        const users = [];
-        querySnapshot.forEach((docSnap) => {
-          users.push({ id: docSnap.id, ...docSnap.data() });
-        });
-        setPendingUsers(users);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      }
-    };
-
-    fetchPendingUsers();
-    const interval = setInterval(fetchPendingUsers, 10000);
-    return () => clearInterval(interval);
   }, [userRole]);
 
   useEffect(() => {
+    if (!isAdminOrSuperAdmin) {
+      return;
+    }
+
+    const q = query(collection(db, "user"), where("next_class", "==", true));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setAnyUserNextClass(!snapshot.empty);
+    }, (error) => {
+      console.error("Error fetching next class users:", error);
+    });
+    return () => unsubscribe();
+  }, [isAdminOrSuperAdmin]);
+
+  useEffect(() => {
+    if (!isAdminOrSuperAdmin) return;
+
     const settingsRef = doc(db, "system_settings", "grade_upgrade");
     const unsubscribe = onSnapshot(settingsRef, (settingsSnap) => {
       if (!settingsSnap.exists()) {
@@ -167,10 +162,12 @@ export default function DetailsPage() {
       const data = settingsSnap.data();
       setAutoUpgradeEnabled(data.enable !== false);
       setAutoUpgradeFrozen(data.frozen === true);
+    }, (error) => {
+      console.error("Error fetching grade upgrade settings:", error);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isAdminOrSuperAdmin]);
 
   const confirmLeave = async (leaveData) => {
     if (!isAdminOrSuperAdmin) {
