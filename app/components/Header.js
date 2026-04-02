@@ -14,7 +14,7 @@ export default function Header({ lang, setLang, showNotification, onNotification
         <div className="flex gap-3 md:gap-4 font-semibold uppercase tracking-wider text-xs ">
             {/* Dynamic Redirect Button */}
           <Link 
-            href={isDetailsPage ? "/" : "/details"} 
+            href={isDetailsPage ? "/home" : "/details"} 
             className="bg-white text-[#800000] px-2.5 md:px-3 py-1 rounded-sm hover:bg-gray-200 transition-colors duration-200 font-bold"
           >
             {isDetailsPage 
