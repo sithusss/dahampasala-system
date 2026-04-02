@@ -204,6 +204,71 @@ const handleSubmit = async (e) => {
             </div>
           </div>
 
+          {/* Section 5: Final Exam Results */}
+          <div className="space-y-4 bg-blue-50 p-5 rounded-xl border border-blue-200">
+            <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] border-b pb-1">Final Exam Results / අවසාන විභාගයේ ප්‍රතිඵල</h3>
+            
+            {/* Faced Final Exam Checkbox */}
+            <div className="flex items-center gap-3">
+              <input 
+                type="checkbox" 
+                name="facedFinalExam" 
+                checked={editData.facedFinalExam || false}
+                onChange={(e) => setEditData(prev => ({ ...prev, facedFinalExam: e.target.checked }))}
+                className="w-5 h-5 rounded cursor-pointer border-gray-400 accent-[#800000]"
+              />
+              <label className="text-sm font-bold text-gray-700 uppercase">
+                {isSi ? "අවසාන විභාගයට සහභාගී විය" : "Faced Final Exam"}
+              </label>
+            </div>
+
+            {/* Exam Results Fields - Only shown if Faced Final Exam is checked */}
+            {editData.facedFinalExam && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-4 bg-white rounded-lg border border-blue-100">
+                <InputField 
+                  labelEn="Buddha Charithay" 
+                  labelSi="බුද්ධ චරිතය" 
+                  name="buddha_charithay" 
+                  value={editData.finalExamResults?.buddha_charithay || ''} 
+                  onChange={(e) => setEditData(prev => ({ 
+                    ...prev, 
+                    finalExamResults: { ...prev.finalExamResults, buddha_charithay: e.target.value }
+                  }))}
+                />
+                <InputField 
+                  labelEn="Buddha Sanskruthiya" 
+                  labelSi="බුද්ධ සංස්කෘතිය" 
+                  name="buddha_sanskruthiya" 
+                  value={editData.finalExamResults?.buddha_sanskruthiya || ''} 
+                  onChange={(e) => setEditData(prev => ({ 
+                    ...prev, 
+                    finalExamResults: { ...prev.finalExamResults, buddha_sanskruthiya: e.target.value }
+                  }))}
+                />
+                <InputField 
+                  labelEn="Pali Abhidharma" 
+                  labelSi="පාලි අභිධර්ම" 
+                  name="pali_abhidharma" 
+                  value={editData.finalExamResults?.pali_abhidharma || ''} 
+                  onChange={(e) => setEditData(prev => ({ 
+                    ...prev, 
+                    finalExamResults: { ...prev.finalExamResults, pali_abhidharma: e.target.value }
+                  }))}
+                />
+                <InputField 
+                  labelEn="Shasana Ithihasaya" 
+                  labelSi="ශාසන ඉතිහාසය" 
+                  name="shasana_ithihasaya" 
+                  value={editData.finalExamResults?.shasana_ithihasaya || ''} 
+                  onChange={(e) => setEditData(prev => ({ 
+                    ...prev, 
+                    finalExamResults: { ...prev.finalExamResults, shasana_ithihasaya: e.target.value }
+                  }))}
+                />
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-col md:flex-row gap-4 pt-6 shrink-0">
             <button 
               type="submit" 
