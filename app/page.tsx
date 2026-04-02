@@ -33,9 +33,9 @@ export default function Home() {
   const [autoUpgradeRunning, setAutoUpgradeRunning] = useState(false);
   const [adminPortalOpen, setAdminPortalOpen] = useState(false);
   const [allUsers, setAllUsers] = useState<PendingUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [processingUserId, setProcessingUserId] = useState<string | null>(null);
   const autoUpgradeSaving = false;
-  const usersLoading = false;
-  const processingUserId: string | null = null;
 
   const isAdminUser = ['admin', 'super-admin', 'superadmin'].includes(userRole || '');
   const isSuperAdmin = userRole === 'super-admin' || userRole === 'superadmin';
@@ -105,6 +105,34 @@ export default function Home() {
       return () => clearInterval(interval);
     }
   }, [userRole, isLoggedIn]);
+
+  // Fetch all users for the admin portal
+  useEffect(() => {
+    if (!isLoggedIn || !isAdminUser || !adminPortalOpen) {
+      if (!adminPortalOpen) setUsersLoading(false);
+      return;
+    }
+
+    const fetchAllUsers = async () => {
+      setUsersLoading(true);
+      try {
+        const snapshot = await getDocs(collection(db, 'user'));
+        const users: PendingUser[] = [];
+
+        snapshot.forEach((docSnap) => {
+          users.push({ id: docSnap.id, ...docSnap.data() });
+        });
+
+        setAllUsers(users);
+      } catch (error) {
+        console.error('Error fetching all users:', error);
+      } finally {
+        setUsersLoading(false);
+      }
+    };
+
+    fetchAllUsers();
+  }, [adminPortalOpen, isAdminUser, isLoggedIn]);
 
   // Fetch System Settings
   useEffect(() => {
@@ -224,19 +252,25 @@ export default function Home() {
 
   const handleMarkRole = async (userId: string, role: 'admin' | 'editor') => {
     try {
+      setProcessingUserId(userId);
       await updateDoc(doc(db, 'user', userId), { role });
       setAllUsers((prev) => prev.map((user) => (user.id === userId ? { ...user, role } : user)));
     } catch (error) {
       console.error('Error updating user role:', error);
+    } finally {
+      setProcessingUserId(null);
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
     try {
+      setProcessingUserId(userId);
       await updateDoc(doc(db, 'user', userId), { status: 'deleted' });
       setAllUsers((prev) => prev.filter((user) => user.id !== userId));
     } catch (error) {
       console.error('Error deleting user:', error);
+    } finally {
+      setProcessingUserId(null);
     }
   };
 
