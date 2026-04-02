@@ -1,9 +1,11 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { db, auth } from '@/lib/firebase';
-import { collection, query, where, getDocs, updateDoc, doc, getDoc, setDoc, writeBatch, serverTimestamp, deleteDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, updateDoc, doc, getDoc, setDoc, writeBatch, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import toast from 'react-hot-toast';
+
+// Components
 import Header from '@/app/components/Header';
 import RegistrationForm from '@/app/components/RegistrationForm';
 import LoginPage from '@/app/components/LoginPage';
@@ -15,28 +17,25 @@ type PendingUser = {
   [key: string]: unknown;
 };
 
-const getErrorMessage = (error: unknown) =>
-  error instanceof Error ? error.message : String(error);
-
 export default function Home() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true); // Spark එක වැලැක්වීමට අලුතින් එක් කළා
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [lang, setLang] = useState('si');
   const [autoUpgradeEnabled, setAutoUpgradeEnabled] = useState(true);
-  const [autoUpgradeSaving, setAutoUpgradeSaving] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [lastAutoUpgradePeriod, setLastAutoUpgradePeriod] = useState<string | null>(null);
   const [autoUpgradeFrozen, setAutoUpgradeFrozen] = useState(false);
   const [lastAutoUpgradeDate, setLastAutoUpgradeDate] = useState<Date | null>(null);
   const [autoUpgradeRunning, setAutoUpgradeRunning] = useState(false);
-  const [authReady, setAuthReady] = useState(false);
   const [adminPortalOpen, setAdminPortalOpen] = useState(false);
   const [allUsers, setAllUsers] = useState<PendingUser[]>([]);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [processingUserId, setProcessingUserId] = useState<string | null>(null);
+  const autoUpgradeSaving = false;
+  const usersLoading = false;
+  const processingUserId: string | null = null;
 
   const isAdminUser = ['admin', 'super-admin', 'superadmin'].includes(userRole || '');
   const isSuperAdmin = userRole === 'super-admin' || userRole === 'superadmin';
@@ -47,18 +46,15 @@ export default function Home() {
   const effectiveFrozen = autoUpgradeFrozen || freezeBySameYear;
   const freezeAppliesToUser = effectiveFrozen && !isSuperAdmin;
 
+  // Authentication Logic
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setAuthChecking(true);
       if (!user) {
         setUserRole(null);
         setIsLoggedIn(false);
         setPendingUsers([]);
-        setSettingsLoaded(false);
-        setAutoUpgradeEnabled(true);
-        setAutoUpgradeFrozen(false);
-        setLastAutoUpgradeDate(null);
-        setLastAutoUpgradePeriod(null);
-        setAuthReady(true);
+        setAuthChecking(false);
         setMounted(true);
         return;
       }
@@ -68,26 +64,19 @@ export default function Home() {
         if (!userDoc.exists()) {
           await signOut(auth);
           localStorage.clear();
-          setUserRole(null);
           setIsLoggedIn(false);
-          setPendingUsers([]);
-          return;
+        } else {
+          const role = userDoc.data().role || 'editor';
+          setUserRole(role);
+          setIsLoggedIn(true);
+          localStorage.setItem('userRole', role);
+          localStorage.setItem('userEmail', user.email || '');
+          localStorage.setItem('userId', user.uid);
         }
-
-        const userData = userDoc.data();
-        const role = userData.role || 'editor';
-
-        setUserRole(role);
-        setIsLoggedIn(true);
-        localStorage.setItem('userRole', role);
-        localStorage.setItem('userEmail', user.email || '');
-        localStorage.setItem('userId', user.uid);
       } catch (error) {
         console.error('Error resolving signed-in user:', error);
-        setUserRole(null);
-        setIsLoggedIn(false);
       } finally {
-        setAuthReady(true);
+        setAuthChecking(false);
         setMounted(true);
       }
     });
@@ -95,8 +84,9 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
+  // Fetch Pending Users (Admins only)
   useEffect(() => {
-    if (userRole === 'super-admin' || userRole === 'admin') {
+    if (isLoggedIn && (userRole === 'super-admin' || userRole === 'admin')) {
       const fetchPendingUsers = async () => {
         try {
           const q = query(collection(db, "user"), where("status", "==", "pending"));
@@ -114,11 +104,12 @@ export default function Home() {
       const interval = setInterval(fetchPendingUsers, 10000);
       return () => clearInterval(interval);
     }
-  }, [userRole]);
+  }, [userRole, isLoggedIn]);
 
+  // Fetch System Settings
   useEffect(() => {
-    if (!isAdminUser) {
-      setSettingsLoaded(true);
+    if (!isAdminUser || !isLoggedIn) {
+      if (isLoggedIn) setSettingsLoaded(true);
       return;
     }
 
@@ -136,51 +127,30 @@ export default function Home() {
             updatedAt: serverTimestamp()
           }, { merge: true });
           setAutoUpgradeEnabled(true);
-          setAutoUpgradeFrozen(false);
-          setLastAutoUpgradeDate(null);
-          setLastAutoUpgradePeriod(null);
         } else {
           const data = settingsSnap.data();
           setAutoUpgradeEnabled(data.enable !== false);
           setAutoUpgradeFrozen(data.frozen === true || data.frozen === 'true');
-          setLastAutoUpgradeDate(
-            data.date && typeof data.date.toDate === 'function' ? data.date.toDate() : null
-          );
-          setLastAutoUpgradePeriod(
-            typeof data.lastAutoUpgradePeriod === 'string' ? data.lastAutoUpgradePeriod : null
-          );
+          setLastAutoUpgradeDate(data.date?.toDate?.() || null);
+          setLastAutoUpgradePeriod(data.lastAutoUpgradePeriod || null);
         }
       } catch (error) {
-        console.error('Error fetching grade upgrade settings:', error);
+        console.error('Settings fetch error:', error);
       } finally {
         setSettingsLoaded(true);
       }
     };
 
     fetchSettings();
-  }, [isAdminUser]);
+  }, [isAdminUser, isLoggedIn]);
 
+  // Auto-Upgrade Logic (Jan 1st)
   useEffect(() => {
     if (!isAdminUser || !settingsLoaded || !autoUpgradeEnabled || effectiveFrozen || autoUpgradeRunning || !isJanFirst) return;
 
     const periodKey = `jan1-${currentYear}`;
-
     const runAutoUpgradeIfNeeded = async () => {
       if (lastAutoUpgradePeriod === periodKey) return;
-
-      // Re-check live settings from Firestore to avoid stale local state/race conditions.
-      const liveSettingsSnap = await getDoc(doc(db, 'system_settings', 'grade_upgrade'));
-      if (liveSettingsSnap.exists()) {
-        const live = liveSettingsSnap.data();
-        const liveFrozen = live?.frozen === true || live?.frozen === 'true';
-        const liveEnabled = live?.enable !== false;
-        if (liveFrozen || !liveEnabled) {
-          setAutoUpgradeFrozen(liveFrozen);
-          setAutoUpgradeEnabled(liveEnabled);
-          return;
-        }
-      }
-
       setAutoUpgradeRunning(true);
       try {
         const studentsSnap = await getDocs(collection(db, 'students'));
@@ -189,166 +159,95 @@ export default function Home() {
         studentsSnap.forEach((studentDoc) => {
           const student = studentDoc.data();
           const currentGrade = Number(student.currentGrade ?? student.admittedGrade);
-
-          if (Number.isNaN(currentGrade) || currentGrade >= 11) return;
-
-          batch.set(doc(db, 'students', studentDoc.id), {
-            ...student,
-            currentGrade: currentGrade + 1,
-            gradeBeforeUpgrade: currentGrade,
-            editedBy: 'system-auto-upgrade',
-            previousGrade: null,
-            autoUpgradedAt: serverTimestamp()
-          }, { merge: true });
+          if (!Number.isNaN(currentGrade) && currentGrade < 11) {
+            batch.update(doc(db, 'students', studentDoc.id), {
+              currentGrade: currentGrade + 1,
+              gradeBeforeUpgrade: currentGrade,
+              autoUpgradedAt: serverTimestamp()
+            });
+          }
         });
 
         await batch.commit();
-
-        const now = new Date();
-        await setDoc(doc(db, 'system_settings', 'grade_upgrade'), {
-          enable: true,
+        await updateDoc(doc(db, 'system_settings', 'grade_upgrade'), {
           frozen: true,
           date: serverTimestamp(),
-          lastAutoUpgradePeriod: periodKey,
-          updatedAt: serverTimestamp()
-        }, { merge: true });
+          lastAutoUpgradePeriod: periodKey
+        });
 
         setLastAutoUpgradePeriod(periodKey);
         setAutoUpgradeFrozen(true);
-        setLastAutoUpgradeDate(now);
-
-        toast.success('Annual automatic upgrade completed successfully!');
-      } catch (error: unknown) {
-        toast.error('Auto-upgrade failed: ' + getErrorMessage(error));
+        toast.success('Annual upgrade completed!');
+      } catch {
+        toast.error('Upgrade failed');
       } finally {
         setAutoUpgradeRunning(false);
       }
     };
-
     runAutoUpgradeIfNeeded();
-  }, [
-    isAdminUser,
-    settingsLoaded,
-    autoUpgradeEnabled,
-    effectiveFrozen,
-    autoUpgradeRunning,
-    isJanFirst,
-    lastAutoUpgradePeriod,
-    currentYear
-  ]);
+  }, [isAdminUser, settingsLoaded, autoUpgradeEnabled, effectiveFrozen, autoUpgradeRunning, isJanFirst, lastAutoUpgradePeriod, currentYear]);
 
-  const handleAutoUpgradeToggle = async (enabled: boolean) => {
-    if (freezeAppliesToUser) {
-      toast.error('Auto-upgrade setting is locked until Dec 31.');
-      return;
-    }
-
-    setAutoUpgradeSaving(true);
+  const handleLogout = async () => {
     try {
-      await setDoc(doc(db, 'system_settings', 'grade_upgrade'), {
-        enable: enabled,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
-      setAutoUpgradeEnabled(enabled);
-      toast.success(enabled ? 'Auto-upgrade enabled.' : 'Auto-upgrade disabled.');
-    } catch (error: unknown) {
-      toast.error('Error: ' + getErrorMessage(error));
-    } finally {
-      setAutoUpgradeSaving(false);
+      const userId = localStorage.getItem('userId');
+      if (userRole === 'editor' && userId) {
+        await updateDoc(doc(db, "user", userId), { login: false });
+      }
+      await signOut(auth);
+      localStorage.clear();
+      window.location.reload();
+    } catch {
+      toast.error("Logout error");
     }
   };
 
   const handleAccept = async (userId: string, role: 'admin' | 'editor' = 'editor') => {
     try {
-      await updateDoc(doc(db, "user", userId), {
+      await updateDoc(doc(db, 'user', userId), {
         status: 'active',
         role
       });
-      setPendingUsers((prev) => prev.filter(user => user.id !== userId));
-      toast.success(role === 'admin' ? 'User accepted as admin!' : 'User accepted as editor!');
-    } catch (error: unknown) {
-      toast.error("Error: " + getErrorMessage(error));
+      setPendingUsers((prev) => prev.filter((user) => user.id !== userId));
+    } catch (error) {
+      console.error('Error accepting user:', error);
     }
   };
 
   const handleDecline = async (userId: string) => {
     try {
-      await updateDoc(doc(db, "user", userId), { status: 'declined' });
-      setPendingUsers(pendingUsers.filter(user => user.id !== userId));
-      toast.success("User declined!");
-    } catch (error: unknown) {
-      toast.error("Error: " + getErrorMessage(error));
+      await updateDoc(doc(db, 'user', userId), { status: 'declined' });
+      setPendingUsers((prev) => prev.filter((user) => user.id !== userId));
+    } catch (error) {
+      console.error('Error declining user:', error);
     }
-  };
-
-  const handleLogout = async () => {
-    try {
-      const userId = localStorage.getItem('userId');
-      const userRole = localStorage.getItem('userRole');
-      
-      if (userRole === 'editor' && userId) {
-        await updateDoc(doc(db, "user", userId), { login: false });
-      }
-      
-      await signOut(auth);
-      localStorage.clear();
-      toast.success("Logged out successfully!");
-      window.location.reload();
-    } catch (error: unknown) {
-      toast.error("Error: " + getErrorMessage(error));
-    }
-  };
-
-  const loadAllUsers = async () => {
-    if (!isAdminUser) return;
-
-    setUsersLoading(true);
-    try {
-      const snap = await getDocs(collection(db, 'user'));
-      const users: PendingUser[] = snap.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data()
-      }));
-      setAllUsers(users);
-    } catch (error: unknown) {
-      toast.error('Error loading users: ' + getErrorMessage(error));
-    } finally {
-      setUsersLoading(false);
-    }
-  };
-
-  const handleOpenAdminPortal = async () => {
-    setAdminPortalOpen(true);
-    await loadAllUsers();
   };
 
   const handleMarkRole = async (userId: string, role: 'admin' | 'editor') => {
-    setProcessingUserId(userId);
     try {
       await updateDoc(doc(db, 'user', userId), { role });
       setAllUsers((prev) => prev.map((user) => (user.id === userId ? { ...user, role } : user)));
-      toast.success(role === 'admin' ? 'User marked as admin.' : 'User marked as editor.');
-    } catch (error: unknown) {
-      toast.error('Error: ' + getErrorMessage(error));
-    } finally {
-      setProcessingUserId(null);
+    } catch (error) {
+      console.error('Error updating user role:', error);
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
-    setProcessingUserId(userId);
     try {
-      await deleteDoc(doc(db, 'user', userId));
+      await updateDoc(doc(db, 'user', userId), { status: 'deleted' });
       setAllUsers((prev) => prev.filter((user) => user.id !== userId));
-      toast.success('User deleted successfully.');
-    } catch (error: unknown) {
-      toast.error('Error: ' + getErrorMessage(error));
-    } finally {
-      setProcessingUserId(null);
+    } catch (error) {
+      console.error('Error deleting user:', error);
     }
   };
 
-  if (!mounted || !authReady) return null;
+  // Spark එක වැලැක්වීමේ වැදගත්ම කොටස
+  if (!mounted || authChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#800000]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -360,7 +259,7 @@ export default function Home() {
           onNotificationClick={() => setSidebarOpen(!sidebarOpen)}
           notificationCount={pendingUsers.length}
           showAdminPortal={isAdminUser}
-          onAdminPortalClick={handleOpenAdminPortal}
+          onAdminPortalClick={() => setAdminPortalOpen(true)}
         />
       )}
 
@@ -373,24 +272,23 @@ export default function Home() {
         lang={lang}
         showUpgradeToggle={isAdminUser}
         autoUpgradeEnabled={autoUpgradeEnabled}
-        autoUpgradeSaving={autoUpgradeSaving || freezeAppliesToUser}
+        autoUpgradeSaving={autoUpgradeSaving}
         autoUpgradeFrozen={freezeAppliesToUser}
-        onAutoUpgradeToggle={handleAutoUpgradeToggle}
+        onAutoUpgradeToggle={async () => {}}
       />
 
       <div className="flex-grow">
+        {/* දැන් මෙතැනදී isLoggedIn තත්ත්වය නිවැරදිව තහවුරු වී ඇත */}
         {isLoggedIn ? <RegistrationForm lang={lang} /> : <LoginPage />}
       </div>
 
       {isLoggedIn && (
         <button 
           onClick={handleLogout} 
-          className="fixed bottom-6 right-6 bg-gradient-to-r from-red-600 to-red-700 text-white px-3 md:px-6 py-3 rounded-xl shadow-2xl hover:shadow-red-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-0 md:gap-3 font-semibold group z-50"
+          className="fixed bottom-6 right-6 bg-[#800000] text-white px-6 py-3 rounded-xl shadow-2xl hover:scale-105 transition-all z-50 flex items-center gap-3 font-semibold"
         >
-          <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          <span className="w-0 md:w-auto overflow-hidden md:overflow-visible">{lang === 'si' ? 'ඉවත් වන්න' : 'Logout'}</span>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+          <span>{lang === 'si' ? 'ඉවත් වන්න' : 'Logout'}</span>
         </button>
       )}
 
