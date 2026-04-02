@@ -53,6 +53,12 @@ export default function ViewModal({ student, isOpen, onClose, lang }) {
     ? String(student.leftDate).split('T')[0]
     : "—";
   const leaveReasonDisplay = student?.leaveReason || "—";
+  const hasFinalExamResults = [
+    student?.finalExamResults?.buddha_charithay,
+    student?.finalExamResults?.buddha_sanskruthiya,
+    student?.finalExamResults?.pali_abhidharma,
+    student?.finalExamResults?.shasana_ithihasaya
+  ].some((value) => String(value || '').trim() !== '');
 
   // නිලධාරීන්ගේ නම් ලබා ගැනීම
   useEffect(() => {
@@ -140,6 +146,33 @@ export default function ViewModal({ student, isOpen, onClose, lang }) {
                 </div>
                 <InfoField labelEn="Leave Date" labelSi="ඉවත් වූ දිනය" value={leftDateDisplay} />
                 <InfoField labelEn="Reason for Leave" labelSi="ඉවත් වීමේ හේතුව" value={leaveReasonDisplay} />
+              </div>
+            )}
+
+            {/* Final Exam Results */}
+            {(student.facedFinalExam || student.finalExamResults) && (
+              <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                <div className="mb-3 text-sm font-bold text-blue-700">
+                  {isSi ? 'අවසාන විභාගයේ ප්‍රතිඵල' : 'Final Exam Results'}
+                </div>
+                {student.facedFinalExam ? (
+                  hasFinalExamResults ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <InfoField labelEn="Buddha Charithay" labelSi="බුද්ධ චරිතය" value={student.finalExamResults?.buddha_charithay || "—"} />
+                      <InfoField labelEn="Buddha Sanskruthiya" labelSi="බුද්ධ සංස්කෘතිය" value={student.finalExamResults?.buddha_sanskruthiya || "—"} />
+                      <InfoField labelEn="Pali Abhidharma" labelSi="පාලි අභිධර්ම" value={student.finalExamResults?.pali_abhidharma || "—"} />
+                      <InfoField labelEn="Shasana Ithihasaya" labelSi="ශාසන ඉතිහාසය" value={student.finalExamResults?.shasana_ithihasaya || "—"} />
+                    </div>
+                  ) : (
+                    <div className="text-sm text-blue-600 font-semibold">
+                      {isSi ? ('ප්‍රතිඵල බලාපොරොත්තුවෙන් ඇත.') : ('Pending Results')}
+                    </div>
+                  )
+                ) : (
+                  <div className="text-sm text-gray-600">
+                    {isSi ? ('අවසාන විභාගයට සහභාගී නොවිය') : ('Did not face final exam')}
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -3,28 +3,28 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 const FINAL_EXAM_SUBJECTS = [
   {
-    key: 'Buddha Charithay',
+    key: 'buddha_charithay',
     si: 'බුද්ධ චරිතය',
     en: 'Buddha Charithay'
   },
   {
-    key: 'Buddha Sanskruthiya',
+    key: 'buddha_sanskruthiya',
     si: 'බුද්ධ සංස්කෘතිය',
     en: 'Buddha Sanskruthiya'
   },
   {
-    key: 'Pali Abhidharma',
+    key: 'pali_abhidharma',
     si: 'පාලි අභිධර්මය',
     en: 'Pali Abhidharma'
   },
   {
-    key: 'Shasana Ithihasaya',
+    key: 'shasana_ithihasaya',
     si: 'ශාසන ඉතිහාසය',
     en: 'Shasana Ithihasaya'
   }
 ];
 
-export default function LeaveConfirmModal({ isOpen, onClose, onConfirm, studentName, currentGrade, lang }) {
+export default function LeaveConfirmModal({ isOpen, onClose, onConfirm, student, studentName, currentGrade, lang }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [leaveReasonType, setLeaveReasonType] = useState('');
   const [otherLeaveReason, setOtherLeaveReason] = useState('');
@@ -38,23 +38,43 @@ export default function LeaveConfirmModal({ isOpen, onClose, onConfirm, studentN
   );
 
   const gradeNumber = Number(currentGrade);
-  const isGrade11 = useMemo(() => gradeNumber === 11, [gradeNumber]);
 
   useEffect(() => {
     if (isOpen) {
-      setLeaveReasonType('');
-      setOtherLeaveReason('');
+      const baseResults = FINAL_EXAM_SUBJECTS.reduce((accumulator, subject) => {
+        accumulator[subject.key] = '';
+        return accumulator;
+      }, {});
+
+      const existingResults = {
+        ...baseResults,
+        ...(student?.finalExamResults || {})
+      };
+      const hasExistingResults = FINAL_EXAM_SUBJECTS.some((subject) => {
+        const value = existingResults[subject.key];
+        return value !== null && value !== undefined && String(value).trim() !== '';
+      });
+
+      const savedReason = student?.leaveReason || '';
+      const isPresetReason = savedReason === 'End of the period' || savedReason === 'Change the residence';
+
+      setLeaveReasonType(isPresetReason ? savedReason : (savedReason ? 'other' : ''));
+      setOtherLeaveReason(isPresetReason ? '' : savedReason);
       setDocumentImages([]);
-      setFacedFinalExam(false);
-      setFinalExamResults(
-        FINAL_EXAM_SUBJECTS.reduce((accumulator, subject) => {
-          accumulator[subject.key] = '';
-          return accumulator;
-        }, {})
-      );
+      setFacedFinalExam(Boolean(student?.facedFinalExam) || hasExistingResults);
+      setFinalExamResults(existingResults);
       setIsDeleting(false);
     }
-  }, [isOpen]);
+  }, [isOpen, student]);
+  const hasAnySavedFinalResults = useMemo(() => {
+    const saved = student?.finalExamResults || {};
+    return FINAL_EXAM_SUBJECTS.some((subject) => {
+      const value = saved[subject.key];
+      return value !== null && value !== undefined && String(value).trim() !== '';
+    });
+  }, [student]);
+  const isGrade11 = useMemo(() => gradeNumber === 11, [gradeNumber]);
+  const showFinalExamSection = isGrade11 || hasAnySavedFinalResults || Boolean(student?.facedFinalExam);
 
   if (!isOpen) return null;
   const isSi = lang === 'si';
@@ -80,8 +100,8 @@ export default function LeaveConfirmModal({ isOpen, onClose, onConfirm, studentN
         leaveReason: resolvedLeaveReason,
         documentImages,
         currentGrade: gradeNumber || currentGrade,
-        facedFinalExam: isGrade11 ? facedFinalExam : false,
-        finalExamResults: isGrade11 && facedFinalExam ? finalExamResults : {}
+        facedFinalExam: showFinalExamSection ? facedFinalExam : false,
+        finalExamResults: showFinalExamSection && facedFinalExam ? finalExamResults : {}
       });
     } finally {
       setIsDeleting(false);
@@ -193,7 +213,7 @@ export default function LeaveConfirmModal({ isOpen, onClose, onConfirm, studentN
             </div>
           </div>
 
-          {isGrade11 && (
+          {showFinalExamSection && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
               <label className="flex items-center gap-2 text-sm font-bold text-gray-700">
                 <input

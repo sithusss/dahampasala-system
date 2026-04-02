@@ -1,14 +1,16 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { db, storage } from '@/lib/firebase'; 
-import { collection, query, where, onSnapshot, doc, setDoc, getDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, setDoc, getDocs, updateDoc, deleteDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import toast from 'react-hot-toast';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import NotificationSidebar from '../components/NotificationSidebar';
 import ViewModal from '../components/ViewModal';
 import EditModal from '../components/EditModal';
 import LeaveConfirmModal from '../components/LeaveConfirmModal';
+import AdminPortalModal from '../components/AdminPortalModal';
 import { generateAllStudentsPDF } from '@/lib/generatePDF';
 
 export default function DetailsPage() {
@@ -35,6 +37,12 @@ export default function DetailsPage() {
   const [currentUserNextClass, setCurrentUserNextClass] = useState(false);
   const [autoUpgradeEnabled, setAutoUpgradeEnabled] = useState(true);
   const [autoUpgradeFrozen, setAutoUpgradeFrozen] = useState(false);
+  const [pendingUsers, setPendingUsers] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [adminPortalOpen, setAdminPortalOpen] = useState(false);
+  const [allUsers, setAllUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [processingUserId, setProcessingUserId] = useState(null);
   const isAdminOrSuperAdmin = ['admin', 'super-admin', 'superadmin'].includes(userRole || '');
   const isSuperAdmin = userRole === 'super-admin' || userRole === 'superadmin';
 
@@ -122,6 +130,31 @@ export default function DetailsPage() {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!(userRole === 'super-admin' || userRole === 'admin')) {
+      setPendingUsers([]);
+      return;
+    }
+
+    const fetchPendingUsers = async () => {
+      try {
+        const q = query(collection(db, "user"), where("status", "==", "pending"));
+        const querySnapshot = await getDocs(q);
+        const users = [];
+        querySnapshot.forEach((docSnap) => {
+          users.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        setPendingUsers(users);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      }
+    };
+
+    fetchPendingUsers();
+    const interval = setInterval(fetchPendingUsers, 10000);
+    return () => clearInterval(interval);
+  }, [userRole]);
 
   useEffect(() => {
     const settingsRef = doc(db, "system_settings", "grade_upgrade");
@@ -330,9 +363,103 @@ export default function DetailsPage() {
     }
   };
 
+  const getErrorMessage = (error) => {
+    if (error instanceof Error) return error.message;
+    return String(error || 'Unknown error');
+  };
+
+  const loadAllUsers = async () => {
+    if (!isAdminOrSuperAdmin) return;
+
+    setUsersLoading(true);
+    try {
+      const snap = await getDocs(collection(db, 'user'));
+      const users = snap.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      }));
+      setAllUsers(users);
+    } catch (error) {
+      toast.error('Error loading users: ' + getErrorMessage(error));
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  const handleOpenAdminPortal = async () => {
+    setAdminPortalOpen(true);
+    await loadAllUsers();
+  };
+
+  const handleAccept = async (userId, role = 'editor') => {
+    try {
+      await updateDoc(doc(db, "user", userId), {
+        status: 'active',
+        role
+      });
+      setPendingUsers((prev) => prev.filter((user) => user.id !== userId));
+      toast.success(role === 'admin' ? 'User accepted as admin!' : 'User accepted as editor!');
+    } catch (error) {
+      toast.error("Error: " + getErrorMessage(error));
+    }
+  };
+
+  const handleDecline = async (userId) => {
+    try {
+      await updateDoc(doc(db, "user", userId), { status: 'declined' });
+      setPendingUsers((prev) => prev.filter((user) => user.id !== userId));
+      toast.success("User declined!");
+    } catch (error) {
+      toast.error("Error: " + getErrorMessage(error));
+    }
+  };
+
+  const handleMarkRole = async (userId, role) => {
+    setProcessingUserId(userId);
+    try {
+      await updateDoc(doc(db, 'user', userId), { role });
+      setAllUsers((prev) => prev.map((user) => (user.id === userId ? { ...user, role } : user)));
+      toast.success(role === 'admin' ? 'User marked as admin.' : 'User marked as editor.');
+    } catch (error) {
+      toast.error('Error: ' + getErrorMessage(error));
+    } finally {
+      setProcessingUserId(null);
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    setProcessingUserId(userId);
+    try {
+      await deleteDoc(doc(db, 'user', userId));
+      setAllUsers((prev) => prev.filter((user) => user.id !== userId));
+      toast.success('User deleted successfully.');
+    } catch (error) {
+      toast.error('Error: ' + getErrorMessage(error));
+    } finally {
+      setProcessingUserId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <Header lang={lang} setLang={setLang} />
+      <Header
+        lang={lang}
+        setLang={setLang}
+        showNotification={isAdminOrSuperAdmin}
+        onNotificationClick={() => setSidebarOpen(!sidebarOpen)}
+        notificationCount={pendingUsers.length}
+        showAdminPortal={isAdminOrSuperAdmin}
+        onAdminPortalClick={handleOpenAdminPortal}
+      />
+
+      <NotificationSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        pendingUsers={pendingUsers}
+        onAccept={handleAccept}
+        onDecline={handleDecline}
+        lang={lang}
+      />
       
       {/* Mobile Grade Dropdown */}
       <div className="md:hidden bg-gray-50 border-b border-gray-200 p-3">
@@ -509,7 +636,15 @@ export default function DetailsPage() {
                           <button onClick={() => handleView(student)} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
                             {lang === 'si' ? 'බලන්න' : 'View'}
                           </button>
-                          <button onClick={() => handleEdit(student)} className="px-3 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600">
+                          <button
+                            onClick={() => handleEdit(student)}
+                            disabled={!isAdminOrSuperAdmin}
+                            className={`px-3 py-1 text-white text-xs rounded ${
+                              isAdminOrSuperAdmin
+                                ? 'bg-yellow-500 hover:bg-yellow-600'
+                                : 'bg-gray-400 cursor-not-allowed'
+                            }`}
+                          >
                             {lang === 'si' ? 'සංස්කරණය' : 'Edit'}
                           </button>
                           {isAdminOrSuperAdmin && (
@@ -538,6 +673,9 @@ export default function DetailsPage() {
                         <div className="flex justify-center gap-2">
                           <button onClick={() => handleView(student)} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
                             {lang === 'si' ? 'බලන්න' : 'View'}
+                          </button>
+                          <button onClick={() => handleEdit(student)} className="px-3 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600">
+                            {lang === 'si' ? 'සංස්කරණය' : 'Edit'}
                           </button>
                         </div>
                       </td>
@@ -600,6 +738,7 @@ export default function DetailsPage() {
       {isLeaveOpen && activeStudent && (
         <LeaveConfirmModal
           isOpen={isLeaveOpen}
+          student={activeStudent}
           studentName={activeStudent.fullName}
           currentGrade={activeStudent.currentGrade ?? activeStudent.admittedGrade}
           onConfirm={confirmLeave}
@@ -679,6 +818,16 @@ export default function DetailsPage() {
           </div>
         </div>
       )}
+
+      <AdminPortalModal
+        isOpen={adminPortalOpen}
+        onClose={() => setAdminPortalOpen(false)}
+        users={allUsers}
+        loading={usersLoading}
+        processingUserId={processingUserId}
+        onMarkRole={handleMarkRole}
+        onDeleteUser={handleDeleteUser}
+      />
     </div>
   );
 }

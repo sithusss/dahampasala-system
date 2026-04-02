@@ -1,19 +1,28 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { db, auth } from '@/lib/firebase';
-import { collection, query, where, getDocs, updateDoc, doc, getDoc, setDoc, writeBatch, serverTimestamp } from "firebase/firestore";
-import { signOut } from "firebase/auth";
+import { collection, query, where, getDocs, updateDoc, doc, getDoc, setDoc, writeBatch, serverTimestamp, deleteDoc } from "firebase/firestore";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import toast from 'react-hot-toast';
 import Header from '@/app/components/Header';
 import RegistrationForm from '@/app/components/RegistrationForm';
 import LoginPage from '@/app/components/LoginPage';
 import NotificationSidebar from '@/app/components/NotificationSidebar';
+import AdminPortalModal from '@/app/components/AdminPortalModal';
+
+type PendingUser = {
+  id: string;
+  [key: string]: unknown;
+};
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
 
 export default function Home() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [pendingUsers, setPendingUsers] = useState<any[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [lang, setLang] = useState('si');
   const [autoUpgradeEnabled, setAutoUpgradeEnabled] = useState(true);
@@ -23,6 +32,11 @@ export default function Home() {
   const [autoUpgradeFrozen, setAutoUpgradeFrozen] = useState(false);
   const [lastAutoUpgradeDate, setLastAutoUpgradeDate] = useState<Date | null>(null);
   const [autoUpgradeRunning, setAutoUpgradeRunning] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [adminPortalOpen, setAdminPortalOpen] = useState(false);
+  const [allUsers, setAllUsers] = useState<PendingUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [processingUserId, setProcessingUserId] = useState<string | null>(null);
 
   const isAdminUser = ['admin', 'super-admin', 'superadmin'].includes(userRole || '');
   const isSuperAdmin = userRole === 'super-admin' || userRole === 'superadmin';
@@ -34,10 +48,51 @@ export default function Home() {
   const freezeAppliesToUser = effectiveFrozen && !isSuperAdmin;
 
   useEffect(() => {
-    const role = localStorage.getItem('userRole');
-    setUserRole(role);
-    setIsLoggedIn(!!role);
-    setMounted(true);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setUserRole(null);
+        setIsLoggedIn(false);
+        setPendingUsers([]);
+        setSettingsLoaded(false);
+        setAutoUpgradeEnabled(true);
+        setAutoUpgradeFrozen(false);
+        setLastAutoUpgradeDate(null);
+        setLastAutoUpgradePeriod(null);
+        setAuthReady(true);
+        setMounted(true);
+        return;
+      }
+
+      try {
+        const userDoc = await getDoc(doc(db, 'user', user.uid));
+        if (!userDoc.exists()) {
+          await signOut(auth);
+          localStorage.clear();
+          setUserRole(null);
+          setIsLoggedIn(false);
+          setPendingUsers([]);
+          return;
+        }
+
+        const userData = userDoc.data();
+        const role = userData.role || 'editor';
+
+        setUserRole(role);
+        setIsLoggedIn(true);
+        localStorage.setItem('userRole', role);
+        localStorage.setItem('userEmail', user.email || '');
+        localStorage.setItem('userId', user.uid);
+      } catch (error) {
+        console.error('Error resolving signed-in user:', error);
+        setUserRole(null);
+        setIsLoggedIn(false);
+      } finally {
+        setAuthReady(true);
+        setMounted(true);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -46,7 +101,7 @@ export default function Home() {
         try {
           const q = query(collection(db, "user"), where("status", "==", "pending"));
           const querySnapshot = await getDocs(q);
-          const users: any[] = [];
+          const users: PendingUser[] = [];
           querySnapshot.forEach((docSnap) => {
             users.push({ id: docSnap.id, ...docSnap.data() });
           });
@@ -163,8 +218,8 @@ export default function Home() {
         setLastAutoUpgradeDate(now);
 
         toast.success('Annual automatic upgrade completed successfully!');
-      } catch (error: any) {
-        toast.error('Auto-upgrade failed: ' + error.message);
+      } catch (error: unknown) {
+        toast.error('Auto-upgrade failed: ' + getErrorMessage(error));
       } finally {
         setAutoUpgradeRunning(false);
       }
@@ -196,8 +251,8 @@ export default function Home() {
       }, { merge: true });
       setAutoUpgradeEnabled(enabled);
       toast.success(enabled ? 'Auto-upgrade enabled.' : 'Auto-upgrade disabled.');
-    } catch (error: any) {
-      toast.error('Error: ' + error.message);
+    } catch (error: unknown) {
+      toast.error('Error: ' + getErrorMessage(error));
     } finally {
       setAutoUpgradeSaving(false);
     }
@@ -211,8 +266,8 @@ export default function Home() {
       });
       setPendingUsers((prev) => prev.filter(user => user.id !== userId));
       toast.success(role === 'admin' ? 'User accepted as admin!' : 'User accepted as editor!');
-    } catch (error: any) {
-      toast.error("Error: " + error.message);
+    } catch (error: unknown) {
+      toast.error("Error: " + getErrorMessage(error));
     }
   };
 
@@ -221,8 +276,8 @@ export default function Home() {
       await updateDoc(doc(db, "user", userId), { status: 'declined' });
       setPendingUsers(pendingUsers.filter(user => user.id !== userId));
       toast.success("User declined!");
-    } catch (error: any) {
-      toast.error("Error: " + error.message);
+    } catch (error: unknown) {
+      toast.error("Error: " + getErrorMessage(error));
     }
   };
 
@@ -239,12 +294,61 @@ export default function Home() {
       localStorage.clear();
       toast.success("Logged out successfully!");
       window.location.reload();
-    } catch (error: any) {
-      toast.error("Error: " + error.message);
+    } catch (error: unknown) {
+      toast.error("Error: " + getErrorMessage(error));
     }
   };
 
-  if (!mounted) return null;
+  const loadAllUsers = async () => {
+    if (!isAdminUser) return;
+
+    setUsersLoading(true);
+    try {
+      const snap = await getDocs(collection(db, 'user'));
+      const users: PendingUser[] = snap.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      }));
+      setAllUsers(users);
+    } catch (error: unknown) {
+      toast.error('Error loading users: ' + getErrorMessage(error));
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  const handleOpenAdminPortal = async () => {
+    setAdminPortalOpen(true);
+    await loadAllUsers();
+  };
+
+  const handleMarkRole = async (userId: string, role: 'admin' | 'editor') => {
+    setProcessingUserId(userId);
+    try {
+      await updateDoc(doc(db, 'user', userId), { role });
+      setAllUsers((prev) => prev.map((user) => (user.id === userId ? { ...user, role } : user)));
+      toast.success(role === 'admin' ? 'User marked as admin.' : 'User marked as editor.');
+    } catch (error: unknown) {
+      toast.error('Error: ' + getErrorMessage(error));
+    } finally {
+      setProcessingUserId(null);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    setProcessingUserId(userId);
+    try {
+      await deleteDoc(doc(db, 'user', userId));
+      setAllUsers((prev) => prev.filter((user) => user.id !== userId));
+      toast.success('User deleted successfully.');
+    } catch (error: unknown) {
+      toast.error('Error: ' + getErrorMessage(error));
+    } finally {
+      setProcessingUserId(null);
+    }
+  };
+
+  if (!mounted || !authReady) return null;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -255,6 +359,8 @@ export default function Home() {
           showNotification={['admin', 'super-admin'].includes(userRole || '')}
           onNotificationClick={() => setSidebarOpen(!sidebarOpen)}
           notificationCount={pendingUsers.length}
+          showAdminPortal={isAdminUser}
+          onAdminPortalClick={handleOpenAdminPortal}
         />
       )}
 
@@ -287,6 +393,16 @@ export default function Home() {
           <span className="w-0 md:w-auto overflow-hidden md:overflow-visible">{lang === 'si' ? 'ඉවත් වන්න' : 'Logout'}</span>
         </button>
       )}
+
+      <AdminPortalModal
+        isOpen={adminPortalOpen}
+        onClose={() => setAdminPortalOpen(false)}
+        users={allUsers}
+        loading={usersLoading}
+        processingUserId={processingUserId}
+        onMarkRole={handleMarkRole}
+        onDeleteUser={handleDeleteUser}
+      />
     </div>
   );
 }
