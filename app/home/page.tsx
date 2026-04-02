@@ -161,6 +161,10 @@ export default function Home() {
 
   const handleLogout = async () => {
     try {
+      const userId = localStorage.getItem('userId');
+      if (userId) {
+        await updateDoc(doc(db, 'user', userId), { login: false });
+      }
       await signOut(auth);
       localStorage.clear();
       router.push('/');

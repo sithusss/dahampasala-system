@@ -60,9 +60,22 @@ export default function LoginPage() {
         const isAdmin = ['super-admin', 'superadmin', 'admin'].includes(userData.role);
 
         if (isAdmin) {
+          const loginTime = new Date().getTime();
+          await updateDoc(doc(db, "user", user.uid), {
+            login: true,
+            loginTime: loginTime,
+          });
           localStorage.setItem('userRole', userData.role);
           localStorage.setItem('userEmail', email.trim());
           localStorage.setItem('userId', user.uid);
+          localStorage.setItem('loginTime', loginTime.toString());
+
+          setTimeout(async () => {
+            await updateDoc(doc(db, "user", user.uid), { login: false });
+            localStorage.clear();
+            router.replace('/');
+          }, 5 * 60 * 60 * 1000);
+
           toast.success("Admin Login Successful!");
           router.replace('/home');
           return;
