@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-export default function Header({ lang, setLang, showNotification, onNotificationClick, notificationCount }) {
+export default function Header({ lang, setLang, showNotification, onNotificationClick, notificationCount, showAdminPortal = false, onAdminPortalClick }) {
     const pathname = usePathname();
     const isDetailsPage = pathname === '/details';
 
@@ -24,6 +24,14 @@ export default function Header({ lang, setLang, showNotification, onNotification
           </Link>
         </div>
         <div className="flex gap-4 items-center font-semibold uppercase tracking-wider text-xs ">
+          {showAdminPortal && (
+            <button
+              onClick={onAdminPortalClick}
+              className="hidden md:inline-flex bg-white text-[#800000] px-3 py-1 rounded-sm hover:bg-gray-200 transition-colors duration-200 font-bold"
+            >
+              Admin Portal
+            </button>
+          )}
           {showNotification && (
             <button
               onClick={onNotificationClick}
