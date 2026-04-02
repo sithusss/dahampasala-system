@@ -1,38 +1,43 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/firebase';
+import { useEffect } from 'react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import LoginPage from '@/app/components/LoginPage';
+import toast from 'react-hot-toast';
 
 export default function RootPage() {
-  const router = useRouter();
-  const [authChecking, setAuthChecking] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsLoggedIn(Boolean(user));
-      setAuthChecking(false);
+    // Check for auto-logout after 5 hours
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const loginTime = localStorage.getItem('loginTime');
+        if (loginTime) {
+          const elapsed = new Date().getTime() - parseInt(loginTime);
+          const fiveHours = 5 * 60 * 60 * 1000;
+          
+          if (elapsed > fiveHours) {
+            // Auto-logout
+            try {
+              const userId = localStorage.getItem('userId');
+              if (userId) {
+                await updateDoc(doc(db, 'user', userId), { login: false });
+              }
+            } catch (error) {
+              console.error('Error updating login status:', error);
+            }
+            await signOut(auth);
+            localStorage.clear();
+            toast.error('Session expired. Please log in again.');
+          }
+        }
+      }
     });
 
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (!authChecking && isLoggedIn) {
-      router.replace('/home');
-    }
-  }, [authChecking, isLoggedIn, router]);
-
-  if (authChecking || isLoggedIn) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#800000]"></div>
-      </div>
-    );
-  }
 
   return <LoginPage />;
 }
