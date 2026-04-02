@@ -83,7 +83,7 @@ export default function LoginPage() {
             await updateDoc(doc(db, "user", user.uid), { login: false });
             localStorage.clear();
             router.replace('/');
-          }, 6 * 60 * 60 * 1000);
+          }, 5 * 60 * 60 * 1000);
 
           toast.success("Login Successful!");
           router.replace('/home');
