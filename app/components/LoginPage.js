@@ -64,7 +64,7 @@ export default function LoginPage() {
           localStorage.setItem('userEmail', email.trim());
           localStorage.setItem('userId', user.uid);
           toast.success("Admin Login Successful!");
-          router.replace('/');
+          router.replace('/home');
           return;
         }
 
@@ -86,7 +86,7 @@ export default function LoginPage() {
           }, 6 * 60 * 60 * 1000);
 
           toast.success("Login Successful!");
-          router.replace('/');
+          router.replace('/home');
         } else {
           await signOut(auth);
           toast.error("ඔබේ ගිණුම තවමත් Admin අනුමත කර නොමැත!");
